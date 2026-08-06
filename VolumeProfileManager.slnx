@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VolumeProfileManager.Console/VolumeProfileManager.Console.csproj" />
+    <Project Path="src/VolumeProfileManager.Core/VolumeProfileManager.Core.csproj" />
+    <Project Path="src/VolumeProfileManager.Domain/VolumeProfileManager.Domain.csproj" />
+    <Project Path="src/VolumeProfileManager.Infrastructure/VolumeProfileManager.Infrastructure.csproj" />
+    <Project Path="src/VolumeProfileManager.TrayApp/VolumeProfileManager.TrayApp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VolumeProfileManager.UnitTests/VolumeProfileManager.UnitTests.csproj" />
+  </Folder>
+</Solution>

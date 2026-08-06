@@ -1,0 +1,69 @@
+## Generated / build
+bin/
+obj/
+**/bin/
+**/obj/
+artifacts/
+
+## VS Code
+.vscode/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+
+## NuGet
+*.nupkg
+.nuget/
+packages/
+
+## Logs and runtime files
+logs/
+*.log
+
+## Test / coverage
+TestResults/
+coverage.opencover.xml
+coverage.*
+*.trx
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Data and generated files
+data/
+profiles.json
+*.json.bak
+state*.txt
+
+## Local secrets / config
+appsettings.Development.json
+secrets.json
+secrets.*
+
+## Tooling
+*.vsix
+*.slnx.user
+
+## Others / temp
+*.tmp
+*.temp
+*.~*
+~$*
+
+## Ignore local editor/project caches
+.vscode-test/
+.dotCover/
+
+## OS-specific
+ehthumbs.db
+Icon?
+
