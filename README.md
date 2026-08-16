@@ -2,6 +2,9 @@
 
 軽量な Windows 向けオーディオデバイス別ボリュームプロファイル管理ツール。
 
+## ダウンロード
+最新版（v1.0.0）のインストーラーは [Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v1.0.0) からダウンロードできます。
+
 ## 目的
 - デバイス切替時に保存済みプロファイルを自動適用する
 - タスクトレイ常駐アプリからプロファイルの保存／確認が可能
@@ -62,6 +65,7 @@ ISCC.exe installer\VolumeProfileManager.iss
 ```
 
 ## ステータス
+- **v1.0.0**: ✅ リリース済み（[Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v1.0.0)）
 - **Phase 1～7**: ✅ 完了 - デバイス取得・音量操作・プロファイル自動照合/自動適用の実装完了
 - **タスクトレイ常駐アプリ**: ✅ 実装済み・実機動作確認済み
 - **CLI版（Console）**: ✅ 廃止済み（Issue #1、TrayAppに一本化）
