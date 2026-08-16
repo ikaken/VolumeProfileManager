@@ -506,6 +506,47 @@ dotnet run --project src\VolumeProfileManager.Console -- run
 
 ---
 
+## フェーズ 8: Console版廃止・TrayApp一本化・インストーラー対応（Issue #1）
+
+> `main` ブランチ（NAudioベース Self-contained構成）の安定動作を確認済み。これをベースに CLI 版を廃止し、TrayApp とインストーラーに一本化する。
+
+### 8.1 Console版廃止
+
+- [x] **Task 8.1.1** `VolumeProfileManager.Console` プロジェクト削除
+  - `src/VolumeProfileManager.Console/` ディレクトリ削除（`CliHost.cs`, `ICliHost.cs`, `Program.cs`, `.csproj`）
+  - `VolumeProfileManager.slnx` からプロジェクト参照を除去
+  - 工数: 0.5h
+
+- [x] **Task 8.1.2** ビルド・テスト確認
+  - `dotnet build` / `dotnet test` が Console 削除後も成功することを確認
+  - 工数: 0.5h
+
+### 8.2 インストーラー実装
+
+- [x] **Task 8.2.1** Inno Setup インストーラースクリプト作成
+  - `installer/VolumeProfileManager.iss`
+  - ユーザーローカルインストール（管理者権限不要）
+  - スタートアップ登録オプション（`StartupRegistration` と同一レジストリキー）
+  - 日本語UI、アンインストーラー対応
+  - 工数: 2h
+
+- [x] **Task 8.2.2** Self-contained発行 → インストーラービルド → 動作確認
+  - `dotnet publish -c Release -r win-x64 --self-contained true`
+  - `ISCC.exe VolumeProfileManager.iss`
+  - 実機でインストール・再起動後の自動起動・タスクトレイ常駐を確認済み
+  - 工数: 1.5h
+  - ✅ 確認完了（2026-08-16）
+
+### 8.3 ドキュメント更新
+
+- [x] **Task 8.3.1** `README.md` / `VolumeProfileManager_spec.md` / `task_list.md` の整合性確認
+  - Console版記述の除去、TrayApp/インストーラー記述への更新
+  - 工数: 1h
+
+**フェーズ 8 合計工数: 5.5h**
+
+---
+
 ## 追加タスク（共通）
 
 ### A. ドキュメント
@@ -566,8 +607,9 @@ dotnet run --project src\VolumeProfileManager.Console -- run
 | フェーズ 5 | 21h | 10 |
 | フェーズ 6 | 12h | 5 |
 | フェーズ 7 | 23h | 11 |
+| フェーズ 8 | 5.5h | 5 |
 | 追加タスク | 18h | 8 |
-| **合計** | **103.5h** | **52** |
+| **合計** | **109h** | **57** |
 
 ---
 
