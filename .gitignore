@@ -44,6 +44,11 @@ profiles.json
 *.json.bak
 state*.txt
 
+## Distribution / publish artifacts
+dist/
+publish/
+publish-*/
+
 ## Local secrets / config
 appsettings.Development.json
 secrets.json

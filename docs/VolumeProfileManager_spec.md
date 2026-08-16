@@ -40,9 +40,9 @@ Windows環境において以下の機能を提供するスタンドアロン型�
 | 項目 | 内容 |
 |------|------|
 | 対応OS | Windows 10（1903以降）、Windows 11（全バージョン） |
-| ランタイム | .NET 8.0 Desktop Runtime（x64） |
+| ランタイム | .NET 10.0（Self-contained、ランタイム同梱） |
 | 権限 | 管理者権限不要 |
-| 形式 | コンソールアプリ + オプション（トレイアイコン） |
+| 形式 | タスクトレイ常駐アプリ（`VolumeProfileManager.TrayApp`）。CLI版（`VolumeProfileManager.Console`）は廃止し、TrayAppに一本化（Issue #1） |
 
 ### 1.4 スコープ
 
@@ -64,14 +64,16 @@ VolumeProfileManager/
  ├─ src/
  │   ├─ VolumeProfileManager.Core           # ユースケース・サービスインターフェース定義
  │   ├─ VolumeProfileManager.Infrastructure # Core Audio API・設定ファイル実装
- │   ├─ VolumeProfileManager.Console        # エントリーポイント・ホスト
+ │   ├─ VolumeProfileManager.TrayApp        # エントリーポイント・タスクトレイ常駐ホスト
  │   └─ VolumeProfileManager.Domain         # エンティティ・値オブジェクト
  ├─ tests/
- │   ├─ VolumeProfileManager.UnitTests
- │   └─ VolumeProfileManager.IntegrationTests
+ │   └─ VolumeProfileManager.UnitTests
+ ├─ installer/                                # Inno Setup インストーラースクリプト
  ├─ docs/                                    # 仕様書・ユーザーマニュアル
  └─ profiles/                                # デフォルト設定ファイル
 ```
+
+> `VolumeProfileManager.Console`（CLI版）は Issue #1 対応により廃止済み。CLIコマンド相当の機能はTrayAppのメニュー（ステータス表示・プロファイル更新）に統合されている。
 
 ### 2.2 各レイヤーの責務
 
@@ -80,7 +82,7 @@ VolumeProfileManager/
 | VolumeProfileManager.Domain | `AudioDevice`, `VolumeProfile`, `DeviceSetting` 等のエンティティ定義。外部依存なし |
 | VolumeProfileManager.Core | ユースケース実装・サービスインターフェース定義 |
 | VolumeProfileManager.Infrastructure | Core Audio API・ファイルI/O・Serilog 等の具体的実装 |
-| VolumeProfileManager.Console | コンソールホスト・DI コンテナ・エントリーポイント |
+| VolumeProfileManager.TrayApp | タスクトレイ常駐ホスト・DI コンテナ・エントリーポイント・Win32 API直接呼び出しによるトレイUI |
 
 ### 2.3 命名規則
 
@@ -231,49 +233,20 @@ public interface IAudioVolumeService
 - `SetMasterVolumeAsync` では、0.0〜1.0 の範囲に収まる入力値を前提とする
 - `IAudioVolumeService` には、将来的にアプリケーション単位の音量制御を追加するための拡張余地を残す
 
-### 3.4 コマンドライン操作
+### 3.4 タスクトレイ操作（旧: コマンドライン操作）
 
-#### 3.4.1 基本コマンド
+> **廃止（Issue #1）**: CLI版（`vpm run` / `vpm status` / `vpm list-devices` / `vpm save-profile` / `vpm delete-profile` 等）は廃止された。同等の機能はタスクトレイアイコンの右クリックメニューに統合されている。
 
-| コマンド | 説明 |
+#### 3.4.1 トレイメニュー
+
+| メニュー項目 | 説明 |
 |---------|------|
-| `vpm run` | バックグラウンドで実行開始 |
-| `vpm stop` | バックグラウンド実行を停止 |
-| `vpm status` | 現在のデバイス・音量・プロファイル状態を表示 |
-| `vpm list-devices` | 利用可能なデバイス一覧 |
-| `vpm save-profile <device-identifier>` | 現在の音量をプロファイルとして保存 |
-| `vpm delete-profile <device-identifier>` | 指定デバイスのプロファイルを削除 |
-| `vpm config` | 設定ファイルを開く（テキストエディタ） |
+| ステータス表示 | 現在のデバイス・音量・ミュート状態をバルーン通知で表示 |
+| プロファイルを更新（現在の音量を保存） | 現在のデフォルトデバイスの音量・ミュート状態をプロファイルとして保存 |
+| スタートアップ登録/解除 | Windowsログオン時の自動起動をトグル |
+| 終了 | アプリケーションを終了 |
 
-#### 3.4.2 実行例
-
-```bash
-# バックグラウンド実行
-vpm run
-
-# デバイス一覧表示
-vpm list-devices
-> Device 0: Realtek Audio [DEFAULT]
-> Device 1: NVIDIA HDMI Audio
-> Device 2: Bluetooth Headphones
-
-# ステータス表示
-vpm status
-> Current Device: Realtek Audio
-> Master Volume: 75%
-> Muted: false
-> Profile Saved: Yes (Last applied: 2026-07-03 13:45:00)
-
-# プロファイル保存
-vpm save-profile {device-identifier}
-
-# プロファイル削除
-vpm delete-profile {device-identifier}
-```
-
-`save-profile` / `delete-profile` は、内部的にプロファイル識別子を使う。
-識別子の実装方法は、デバイス判別調査フェーズで確定する。
-ユーザー向けには `list-devices` の出力を見て、指定可能な識別子を選択する。
+デバイス切り替えの検知・プロファイルの自動適用・新規プロファイルの自動作成はバックグラウンドで常時動作し、ユーザー操作は不要。適用結果はバルーン通知で表示される。
 
 ## 3.5 開発フェーズ
 
@@ -410,13 +383,12 @@ vpm delete-profile {device-identifier}
 [13:50:24 INF] 音量調整完了 (適用時間: 150ms)
 ```
 
-### 5.2 オプション機能：トレイアイコン
+### 5.2 トレイアイコン（実装済み）
 
-将来の拡張として、Windows トレイアイコン表示を検討：
+Windows トレイアイコンを主UIとして採用（Win32 API直接呼び出し、WinForms不使用）：
 
-- 現在のデバイス表示
-- 現在の音量表示
-- 右クリックメニュー（設定、ステータス、終了）
+- 右クリックメニュー: ステータス表示 / プロファイルを更新 / スタートアップ登録/解除 / 終了
+- プロファイル自動適用時のバルーン通知（音量制御非対応デバイスの場合はエラー通知）
 
 ---
 
@@ -443,9 +415,8 @@ vpm delete-profile {device-identifier}
 <PackageReference Include="NAudio" Version="2.2.*" />
 <PackageReference Include="System.Text.Json" Version="8.0.*" />
 
-<!-- VolumeProfileManager.Console -->
+<!-- VolumeProfileManager.TrayApp -->
 <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
-<PackageReference Include="Serilog.Sinks.Console" Version="6.0.*" />
 <PackageReference Include="Serilog.Sinks.File" Version="5.0.*" />
 ```
 
@@ -501,9 +472,10 @@ vpm delete-profile {device-identifier}
 
 ### v1.1 - 安定性向上
 
-- [ ] トレイアイコン UI
+- [x] トレイアイコン UI（Issue #5）
+- [x] Console版廃止・TrayApp一本化（Issue #1）
+- [ ] インストーラー（Inno Setup）（Issue #1、対応中）
 - [ ] 設定ウィザード
-- [ ] インストーラー（NSIS/WiX）
 - [ ] UX 改善（設定の簡潔化）
 
 ### v2.0 - 拡張機能
