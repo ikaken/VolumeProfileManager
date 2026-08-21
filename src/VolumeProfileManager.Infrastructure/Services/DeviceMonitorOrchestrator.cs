@@ -16,13 +16,17 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
     private readonly IAudioDeviceService _deviceSvc;
     private readonly ILogger _logger = Log.ForContext<DeviceMonitorOrchestrator>();
     private readonly object _debounceLock = new();
+    private readonly object _lastAppliedLock = new();
+    private readonly SemaphoreSlim _applyLock = new(1, 1);
+    private readonly TimeSpan _debounceWindow;
+    private readonly TimeSpan _sameDeviceSuppressWindow;
     private bool _started;
     private CancellationTokenSource? _debounceCts;
-    private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(800);
-    private readonly object _lastAppliedLock = new();
     private string? _lastAppliedDeviceId;
     private DateTime _lastAppliedUtc = DateTime.MinValue;
-    private static readonly TimeSpan SameDeviceSuppressWindow = TimeSpan.FromSeconds(3);
+
+    private static readonly TimeSpan DefaultDebounceWindow = TimeSpan.FromMilliseconds(800);
+    private static readonly TimeSpan DefaultSameDeviceSuppressWindow = TimeSpan.FromSeconds(3);
 
     public event EventHandler<ProfileAppliedEventArgs>? ProfileApplied;
 
@@ -30,12 +34,16 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
         IDeviceMonitorService monitor,
         IProfileService profileSvc,
         IAudioVolumeService volSvc,
-        IAudioDeviceService deviceSvc)
+        IAudioDeviceService deviceSvc,
+        TimeSpan? debounceWindow = null,
+        TimeSpan? sameDeviceSuppressWindow = null)
     {
         _monitor = monitor;
         _profileSvc = profileSvc;
         _volSvc = volSvc;
         _deviceSvc = deviceSvc;
+        _debounceWindow = debounceWindow ?? DefaultDebounceWindow;
+        _sameDeviceSuppressWindow = sameDeviceSuppressWindow ?? DefaultSameDeviceSuppressWindow;
     }
 
     public void Start()
@@ -84,13 +92,23 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
         }
 
         _ = ProcessSettledDeviceChangeAsync(cts.Token);
+
+        if (e?.ChangeType == DeviceChangeType.DefaultDeviceChanged)
+        {
+            _ = Task.Run(ApplyImmediatelyAsync);
+        }
+    }
+
+    private async Task ApplyImmediatelyAsync()
+    {
+        await ResolveAndApplyAsync();
     }
 
     private async Task ProcessSettledDeviceChangeAsync(CancellationToken token)
     {
         try
         {
-            await Task.Delay(DebounceWindow, token);
+            await Task.Delay(_debounceWindow, token);
         }
         catch (TaskCanceledException)
         {
@@ -103,6 +121,12 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
             return;
         }
 
+        await ResolveAndApplyAsync();
+    }
+
+    private async Task ResolveAndApplyAsync()
+    {
+        await _applyLock.WaitAsync();
         try
         {
             // 静定後、実際に確定しているデフォルトデバイスを問い合わせる
@@ -118,19 +142,16 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
             var deviceName = defaultDevice.DeviceName;
 
             // OnDeviceStateChanged / OnDefaultDeviceChanged など複数のCOMコールバックが
-            // デバウンス期間(800ms)よりも間隔を空けて同一デバイスへの切り替えを重複通知することがあるため、
+            // デバウンス期間よりも間隔を空けて同一デバイスへの切り替えを重複通知することがあるため、
             // 直近に適用済みの同一デバイスであれば再適用・再通知しない
             lock (_lastAppliedLock)
             {
                 var now = DateTime.UtcNow;
-                if (deviceId == _lastAppliedDeviceId && (now - _lastAppliedUtc) < SameDeviceSuppressWindow)
+                if (deviceId == _lastAppliedDeviceId && (now - _lastAppliedUtc) < _sameDeviceSuppressWindow)
                 {
                     _logger.Debug("Suppressed duplicate settled event for already-applied device {DeviceId}", deviceId);
                     return;
                 }
-
-                _lastAppliedDeviceId = deviceId;
-                _lastAppliedUtc = now;
             }
 
             _logger.Information("Device changed detected: {DeviceName} ({DeviceId})", deviceName, deviceId);
@@ -143,6 +164,7 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
                 await _volSvc.SetMuteStateAsync(profile.IsMuted);
                 _logger.Information("Profile applied: Volume={Volume:P0}, Muted={IsMuted} for {DeviceName}", profile.MasterVolume, profile.IsMuted, deviceName);
 
+                MarkApplied(deviceId);
                 ProfileApplied?.Invoke(this, new ProfileAppliedEventArgs
                 {
                     DeviceId = deviceId,
@@ -175,6 +197,7 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
                     _logger.Information("Auto-created profile for new device {DeviceName} ({DeviceId}): Volume={Volume:P0}, Muted={IsMuted}",
                         deviceName, deviceId, currentVol, currentMute);
 
+                    MarkApplied(deviceId);
                     ProfileApplied?.Invoke(this, new ProfileAppliedEventArgs
                     {
                         DeviceId = deviceId,
@@ -193,6 +216,19 @@ public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
         catch (Exception ex)
         {
             _logger.Error(ex, "Unhandled error in DeviceChanged handler.");
+        }
+        finally
+        {
+            _applyLock.Release();
+        }
+    }
+
+    private void MarkApplied(string deviceId)
+    {
+        lock (_lastAppliedLock)
+        {
+            _lastAppliedDeviceId = deviceId;
+            _lastAppliedUtc = DateTime.UtcNow;
         }
     }
 }

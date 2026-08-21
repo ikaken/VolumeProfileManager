@@ -75,19 +75,19 @@ public class DeviceMonitorService : IDeviceMonitorService, IMMNotificationClient
     void IMMNotificationClient.OnDeviceStateChanged(string deviceId, DeviceState newState)
     {
         _logger.Debug("Device state changed: {DeviceId} {NewState}", deviceId, newState);
-        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = deviceId, Timestamp = DateTime.UtcNow });
+        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = deviceId, Timestamp = DateTime.UtcNow, ChangeType = DeviceChangeType.DeviceStateChanged });
     }
 
     void IMMNotificationClient.OnDeviceAdded(string pwstrDeviceId)
     {
         _logger.Debug("Device added: {DeviceId}", pwstrDeviceId);
-        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = pwstrDeviceId, Timestamp = DateTime.UtcNow });
+        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = pwstrDeviceId, Timestamp = DateTime.UtcNow, ChangeType = DeviceChangeType.DeviceAdded });
     }
 
     void IMMNotificationClient.OnDeviceRemoved(string deviceId)
     {
         _logger.Debug("Device removed: {DeviceId}", deviceId);
-        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = deviceId, NewDeviceId = string.Empty, Timestamp = DateTime.UtcNow });
+        DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = deviceId, NewDeviceId = string.Empty, Timestamp = DateTime.UtcNow, ChangeType = DeviceChangeType.DeviceRemoved });
     }
 
     void IMMNotificationClient.OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
@@ -95,7 +95,7 @@ public class DeviceMonitorService : IDeviceMonitorService, IMMNotificationClient
         if (flow == DataFlow.Render && role == Role.Multimedia)
         {
             _logger.Information("Default playback device changed: {DeviceId}", defaultDeviceId);
-            DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = defaultDeviceId, Timestamp = DateTime.UtcNow });
+            DeviceChanged?.Invoke(this, new DeviceChangedEventArgs { PreviousDeviceId = string.Empty, NewDeviceId = defaultDeviceId, Timestamp = DateTime.UtcNow, ChangeType = DeviceChangeType.DefaultDeviceChanged });
         }
     }
 
