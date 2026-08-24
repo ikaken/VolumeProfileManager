@@ -23,7 +23,7 @@
 |------|------|
 | 正式名称 | VolumeProfileManager |
 | 略称 | VPM |
-| コンセプト | オーディオデバイス切り替え時に音量・音声設定を自動調整する常駐型ユーティリティ |
+| コンセプト | オーディオデバイス切り替え時に音量・ミュート状態を自動調整する常駐型ユーティリティ |
 
 ### 1.2 目的
 
@@ -33,7 +33,7 @@ Windows環境において以下の機能を提供するスタンドアロン型�
 - デバイス切り替え検知
 - デバイスごとの音量プロファイル管理
 - デバイス変更時の自動音量調整
-- 最小限の UI で軽量実行
+- タスクトレイ常駐による最小限の UI
 
 ### 1.3 対象OS・環境
 
@@ -70,7 +70,7 @@ VolumeProfileManager/
  │   └─ VolumeProfileManager.UnitTests
  ├─ installer/                                # Inno Setup インストーラースクリプト
  ├─ docs/                                    # 仕様書・ユーザーマニュアル
- └─ profiles/                                # デフォルト設定ファイル
+ └─ profiles/                                # （不使用）
 ```
 
 > `VolumeProfileManager.Console`（CLI版）は Issue #1 対応により廃止済み。CLIコマンド相当の機能はTrayAppのメニュー（ステータス表示・プロファイル更新）に統合されている。
@@ -79,7 +79,7 @@ VolumeProfileManager/
 
 | プロジェクト | 責務 |
 |-------------|------|
-| VolumeProfileManager.Domain | `AudioDevice`, `VolumeProfile`, `DeviceSetting` 等のエンティティ定義。外部依存なし |
+| VolumeProfileManager.Domain | `AudioDeviceInfo`, `VolumeProfile`, `DeviceChangedEventArgs` 等のエンティティ定義。外部依存なし |
 | VolumeProfileManager.Core | ユースケース実装・サービスインターフェース定義 |
 | VolumeProfileManager.Infrastructure | Core Audio API・ファイルI/O・Serilog 等の具体的実装 |
 | VolumeProfileManager.TrayApp | タスクトレイ常駐ホスト・DI コンテナ・エントリーポイント・Win32 API直接呼び出しによるトレイUI |
@@ -91,7 +91,7 @@ VolumeProfileManager/
 | ソリューション | VolumeProfileManager |
 | 名前空間 | VolumeProfileManager.* |
 | アセンブリ | VolumeProfileManager.* |
-| 設定ファイル | `profiles.json` (ユーザーディレクトリ: `%APPDATA%\VolumeProfileManager\`) |
+| 設定ファイル | `profiles.json` (ユーザーディレクトリ: `%LOCALAPPDATA%\VolumeProfileManager\`) |
 
 ---
 
@@ -107,7 +107,9 @@ Windows Core Audio API を用いてオーディオデバイス変更をリアル
 |-----|------|
 | 監視対象 | 既定のマルチメディア再生デバイス（DataFlow=Render, Role=Multimedia） |
 | 検知イベント | デバイス追加・削除・状態変更・既定デバイス変更 |
-| 応答時間 | 100ms 以内 |
+| 応答時間 | `OnDefaultDeviceChanged` 検知時は即時にプロファイル適用を開始。状態変更等は静定後に処理 |
+| デバウンス | 末尾デバウンス 800ms。即時適用と検証パスを併用し、安定性を確保 |
+| 重複抑制 | 同一デバイスは 3 秒間再適用・再通知しない |
 | ログ | 全イベントを Serilog で記録 |
 
 #### 3.1.2 デバイス一覧取得
@@ -141,61 +143,65 @@ public class VolumeProfile
 
 #### 3.2.1.1 プロファイル保存サービス
 
-`IProfileService` は `profiles.json` の読み書きとプロファイル管理を担当する。シンプルかつ拡張性のある契約として、以下のメソッドを定義する。
+`IProfileService` は `profiles.json` の読み書きとプロファイル管理を担当する。
 
 ```csharp
 public interface IProfileService
 {
-    Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier);
+    Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier, string? deviceName = null);
     Task<IReadOnlyList<VolumeProfile>> GetAllProfilesAsync();
     Task SaveProfileAsync(VolumeProfile profile);
     Task DeleteProfileAsync(string deviceIdentifier);
 }
 ```
 
-- `GetProfileAsync(string deviceIdentifier)`
-  - `deviceIdentifier` でプロファイルを検索し、存在しなければ `null` を返す
+- `GetProfileAsync(string deviceIdentifier, string? deviceName = null)`
+  - `deviceIdentifier` でプロファイルを検索する
+  - 一致しなければ `deviceName` をフォールバックとして使用する
+  - どちらも一致しなければ `null` を返す
 - `GetAllProfilesAsync()`
   - 全プロファイルを取得する
 - `SaveProfileAsync(VolumeProfile profile)`
   - `deviceId` をキーとして新規登録または上書き保存する
-- `DeleteProfileAsync(string deviceId)`
+- `DeleteProfileAsync(string deviceIdentifier)`
   - 指定したデバイスのプロファイルを削除する
 
 #### 3.2.2 設定ファイル管理
 
-- **保存先**：`%APPDATA%\VolumeProfileManager\profiles.json`
-- **形式**：JSON
-- **初期化**：アプリ起動時に自動作成
+- **保存先**：`%LOCALAPPDATA%\VolumeProfileManager\profiles.json`
+- **形式**：JSON 配列
+- **初期化**：アプリ起動時ではなく、初回保存時にディレクトリを自動作成
 
 ```json
-{
-  "version": "1.0",
-  "profiles": [
-    {
-      "deviceId": "{0.0.1.00000000}.{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}",
-      "deviceName": "Realtek Audio",
-      "masterVolume": 0.75,
-      "isMuted": false,
-      "createdAt": "2026-07-03T12:00:00Z",
-      "lastApplied": "2026-07-03T13:45:00Z"
-    }
-  ]
-}
+[
+  {
+    "deviceId": "{0.0.1.00000000}.{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}",
+    "deviceName": "Realtek Audio",
+    "masterVolume": 0.75,
+    "isMuted": false,
+    "createdAt": "2026-07-03T12:00:00Z",
+    "lastApplied": "2026-07-03T13:45:00Z"
+  }
+]
 ```
+
+- 書き込み前に `.json.bak` へバックアップを作成する
 
 ### 3.3 自動音量調整
 
 #### 3.3.1 デバイス切り替え時の動作
 
-1. **デバイス変更を検知** → DeviceMonitorService が DeviceChanged イベント発火
-2. **新しい既定デバイスを取得** → AudioDeviceService.GetCurrentDefaultDeviceAsync()
-3. **プロファイルを検索** → ProfileService.GetProfileAsync(deviceId)
-4. **プロファイルが存在する場合** → 保存された音量を適用
-5. **プロファイルが存在しない場合** → 新規作成し、現在の音量を記録
+1. **デバイス変更を検知** → `DeviceMonitorService` が `DeviceChanged` イベント発火（`ChangeType` 付き）
+2. **即時適用**（`DefaultDeviceChanged` のみ）→ `DeviceMonitorOrchestrator` が待たずに処理を開始
+3. **検証パス**（全イベント共通）→ 800ms 末尾デバウンス後に確定デフォルトデバイスを取得して処理
+4. **新しい既定デバイスを取得** → `AudioDeviceService.GetDefaultPlaybackDeviceAsync()`
+5. **プロファイルを検索** → `ProfileService.GetProfileAsync(deviceId, deviceName)`
+6. **プロファイルが存在する場合** → 保存された音量・ミュートを適用
+7. **プロファイルが存在しない場合** → 新規作成し、現在の音量を記録
 
 ```
 デバイス A (Volume=70%) → デバイス B に切り替え
+  ├─ DefaultDeviceChanged を即時処理
   ├─ B のプロファイル存在
   │   └─ 保存された Volume=50% を自動適用
   └─ B のプロファイル未作成
@@ -220,7 +226,7 @@ public interface IAudioVolumeService
 - `GetMasterVolumeAsync()`
   - 現在のマスターボリュームを 0.0〜1.0 の範囲で取得する
 - `SetMasterVolumeAsync(float volume)`
-  - 指定したマスターボリュームを適用する
+  - 指定したマスターボリュームを適用する（`Math.Clamp` で 0.0〜1.0 に制限）
 - `GetMuteStateAsync()`
   - 現在のミュート状態を取得する
 - `SetMuteStateAsync(bool isMuted)`
@@ -230,12 +236,12 @@ public interface IAudioVolumeService
 
 - `Core` ではインターフェースのみを定義し、依存を分離する
 - `Infrastructure` では NAudio の `MMDevice` や `AudioEndpointVolume` を利用して実装する
-- `SetMasterVolumeAsync` では、0.0〜1.0 の範囲に収まる入力値を前提とする
+- `SetMasterVolumeAsync` では、0.0〜1.0 の範囲に収まるよう Clamp する
 - `IAudioVolumeService` には、将来的にアプリケーション単位の音量制御を追加するための拡張余地を残す
 
-### 3.4 タスクトレイ操作（旧: コマンドライン操作）
+### 3.4 タスクトレイ操作
 
-> **廃止（Issue #1）**: CLI版（`vpm run` / `vpm status` / `vpm list-devices` / `vpm save-profile` / `vpm delete-profile` 等）は廃止された。同等の機能はタスクトレイアイコンの右クリックメニューに統合されている。
+> CLI版（`vpm run` / `vpm status` / `vpm list-devices` / `vpm save-profile` / `vpm delete-profile` 等）は廃止された。同等の機能はタスクトレイアイコンの右クリックメニューに統合されている。
 
 #### 3.4.1 トレイメニュー
 
@@ -246,64 +252,21 @@ public interface IAudioVolumeService
 | スタートアップ登録/解除 | Windowsログオン時の自動起動をトグル |
 | 終了 | アプリケーションを終了 |
 
-デバイス切り替えの検知・プロファイルの自動適用・新規プロファイルの自動作成はバックグラウンドで常時動作し、ユーザー操作は不要。適用結果はバルーン通知で表示される。
+デバイス切り替えの検知・プロファイル自動適用・新規プロファイルの自動作成はバックグラウンドで常時動作し、ユーザー操作は不要。適用結果はバルーン通知で表示される。
 
-## 3.5 開発フェーズ
+### 3.5 開発フェーズ
 
-本プロジェクトは以下のフェーズで段階的に実装を進める。
+本プロジェクトは以下のフェーズで段階的に実装を進める。フェーズ 1〜8 は完了している。
 
-1. **デバイス判別方法を調査する**
-   - 目的: Windows のデバイス ID と識別子の挙動を確認し、安定したプロファイル紐付け方式を決定する
-   - 検証内容:
-     - デバイス切り替え時に `DeviceId` がどのように変化するか
-     - 同一デバイスの再接続・再起動後の `DeviceId` の変化
-     - `DeviceName` やその他識別子が安定して使えるか
-     - 実際に使える識別情報の組み合わせ
-   - 調査対象の識別子候補:
-     - Core Audio の `DeviceId`
-     - デバイスの表示名 (`DeviceName`)
-     - ハードウェア ID / 製品名・製造元情報
-     - `DataFlow` / `Role` を含む条件
-   - フォールバック戦略:
-     - まず `DeviceId` で検索する
-     - `DeviceId` が一致しない場合は `DeviceName` など補助識別子で再検索する
-     - それでも一致しない場合は新しいプロファイルとして扱う
-   - 成功基準: プロファイル検索に使う識別方法とフォールバック方式を仕様として確定できる
+1. **デバイス判別方法を調査する**（完了）
+2. **取得済みデバイスの音量・ミュート操作を確認する**（完了）
+3. **常驻してデバイス切り替わりを自動で検出し、デバイス情報を取得・表示する**（完了）
+4. **切り替わったデバイスの情報を自動で取得する**（完了、フェーズ 3 に統合）
+5. **現在のデバイス情報を手動でプロファイルとして保存する**（完了）
+6. **デバイスが切り替わった時に自動で対応するプロファイルを認識する**（完了）
+7. **デバイスが切り替わった時に自動的に対応するプロファイル情報を適用する**（完了）
+8. **Console版廃止・TrayApp一本化・インストーラー対応（Issue #1）**（完了）
 
-2. **現在のデバイス情報を手動で取得する**
-   - 目的: 既定再生デバイスの取得機能を確認する
-   - 取得内容: `DeviceId`, `DeviceName`, `MasterVolume`, `IsMuted`, `DataFlow/Role`
-   - 成功基準: CLI で現在の既定再生デバイス情報を表示できる
-
-3. **常駐してデバイス切り替わりを自動で検出する**
-   - 目的: 既定再生デバイスの変更イベントを受け取る監視基盤を構築する
-   - 監視対象: `Render` / `Multimedia` の既定再生デバイス
-   - 成功基準: デバイス切り替え時にイベントが発火する
-
-4. **切り替わったデバイスの情報を自動で取得する**
-   - 目的: 監視イベント後に最新の既定デバイス情報を自動取得する
-   - 動作: イベント受信 → `GetCurrentDefaultDeviceAsync()` 実行
-   - 成功基準: 切り替え後のデバイス情報を状態に反映できる
-
-5. **現在のデバイス情報を手動でプロファイルとして保存する**
-   - 目的: プロファイル保存・読み書きの基盤を構築する
-   - 仕様: `profiles.json` に `deviceId`, `deviceName`, `masterVolume`, `isMuted`, `createdAt`, `lastApplied` を保存
-   - 成功基準: CLI でプロファイルを保存・確認できる
-
-5. **デバイスが切り替わった時に自動で対応するプロファイルを認識する**
-   - 目的: 新しい既定デバイスに対応するプロファイルを検索する
-   - 検索ルール: `DeviceId` を主キーとし、必要に応じて `DeviceName` でフォールバック
-   - 成功基準: 対応プロファイルの有無を判定できる
-
-6. **現在のデバイスの情報を対応するプロファイルの情報で更新する**
-   - 目的: プロファイルを最新状態に維持する
-   - 動作: プロファイルが未存在なら新規作成、既存なら更新
-   - 成功基準: 切り替え時にプロファイルの登録・更新が行える
-
-7. **デバイスが切り替わった時に自動的に対応するプロファイル情報を適用する**
-   - 目的: 切り替え時に音量・ミュート状態を自動で復元する
-   - 動作: プロファイルの `masterVolume` / `isMuted` を適用、失敗時はリトライ・ログ出力
-   - 成功基準: 既定デバイス切り替え時に自動で設定を反映できる
 ---
 
 ## 4. 非機能要件
@@ -312,7 +275,7 @@ public interface IAudioVolumeService
 
 | 要件 | 基準 |
 |-----|------|
-| デバイス変更検知応答時間 | 100ms 以内 |
+| デバイス変更検知応答時間 | `OnDefaultDeviceChanged` は即時適用開始。状態変更系は 800ms 静定後 |
 | 音量調整応答時間 | 200ms 以内 |
 | メモリ使用量 | 30MB 以下（アイドル時） |
 | CPU 使用率 | 1% 以下（アイドル時） |
@@ -323,67 +286,56 @@ public interface IAudioVolumeService
 |-----|------|
 | 設定ファイル破損対策 | バックアップファイル自動作成（`.json.bak`） |
 | エラーハンドリング | 全ての例外を Serilog で記録、アプリ継続実行 |
-| Core Audio API エラー | 再試行ロジック実装（指数バックオフ） |
-
-#### 4.2.1 再試行パラメータ
-
-- 初期遅延: 100ms
-- 乗数: 1.5×
-- 最大遅延: 5,000ms
-- 最大試行回数: 5回
-- 対象: Core Audio API 呼び出し、デバイス取得・音量設定の操作
-
-再試行は、短時間の transient エラーやデバイス状態の遷移による失敗に耐えるために使う。
-5 回失敗しても復旧しない場合はエラーをログに記録し、アプリケーションは継続動作する。
+| Core Audio API エラー | 例外をキャッチしてログ出力、即時適用失敗時は検証パスで再試行の機会を残す |
+| 重複適用防止 | 同一デバイス 3 秒抑制 + 適用処理の直列化 |
 
 ### 4.3 セキュリティ
 
 | 要件 | 対応 |
 |-----|------|
 | 管理者権限 | 不要 |
-| 設定ファイル保護 | ユーザーの %APPDATA% 内に保存（OS ユーザー分離） |
+| 設定ファイル保護 | ユーザーの `%LOCALAPPDATA%` 内に保存（OS ユーザー分離） |
 | ログ情報 | 機密情報（シークレット等）を含めない |
 
 ### 4.3 ログ設定
 
-- コンソール: INFO 以上を出力する
-- ファイル: DEBUG 以上を記録する
-- ログ出力先: `%APPDATA%\VolumeProfileManager\logs\`
+- ファイル: `INFO` 以上を記録する
+- ログ出力先: `%LOCALAPPDATA%\VolumeProfileManager\logs\`
 - ローテーション: 日次
 - 保持期間: 30 日程度（運用ポリシーによって調整可能）
 
-ファイルログには詳細なデバッグ情報を含め、コンソールには運用上必要な情報のみを表示する。
+ファイルログには詳細なデバッグ情報を含め、Serilog の最小レベルは `Debug`、ファイル出力は `Information` 以上とする。
 
 ### 4.4 互換性
 
-- .NET 8.0 自己包含実行ファイル（SCD）で配布
+- .NET 10.0 自己包含実行ファイル（SCD）で配布
 - Windows 10 1903 以降で動作確認
 
 ---
 
 ## 5. UI仕様
 
-### 5.1 コンソール出力
+### 5.1 ログ出力例
 
 #### 5.1.1 起動時ログ
 
 ```
-[13:45:00 INF] VolumeProfileManager v1.0.0 起動しました
-[13:45:00 INF] 設定ファイル: C:\Users\User\AppData\Roaming\VolumeProfileManager\profiles.json
-[13:45:00 INF] 既定デバイス: Realtek Audio
-[13:45:00 INF] マスターボリューム: 75%
-[13:45:00 INF] デバイス監視を開始しました
+[13:45:00 INF] VolumeProfileManager TrayApp starting...
+[13:45:00 INF] DeviceMonitorService initialized and registered callback.
+[13:45:00 INF] AudioDeviceService initialized.
+[13:45:00 INF] DeviceMonitorOrchestrator started.
 ```
 
 #### 5.1.2 デバイス変更ログ
 
 ```
-[13:50:23 INF] デバイスが変更されました: NVIDIA HDMI Audio
-[13:50:24 INF] プロファイル適用: Volume 60% → 60%
-[13:50:24 INF] 音量調整完了 (適用時間: 150ms)
+[13:50:23 INF] Default playback device changed: {0.0.0.00000000}.{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+[13:50:23 INF] Device changed detected: Headphones ({0.0.0.00000000}.{...})
+[13:50:23 INF] Matched profile Headphones (...) for input ID '...'
+[13:50:23 INF] Profile applied: Volume=50 %, Muted=false for Headphones
 ```
 
-### 5.2 トレイアイコン（実装済み）
+### 5.2 トレイアイコン
 
 Windows トレイアイコンを主UIとして採用（Win32 API直接呼び出し、WinForms不使用）：
 
@@ -398,26 +350,25 @@ Windows トレイアイコンを主UIとして採用（Win32 API直接呼び出�
 
 | レイヤー | 技術 | バージョン |
 |---------|------|-----------|
-| ランタイム | .NET | 8.0 |
-| 言語 | C# | 12.0 |
-| Core Audio API | NAudio | 2.2+ |
-| ロギング | Serilog | 4.0+ |
-| テスト | xUnit | 2.6+ |
-| ビルド | MSBuild | .NET 8.0 付属 |
+| ランタイム | .NET | 10.0 |
+| 言語 | C# | 13.0 |
+| Core Audio API | NAudio | 2.2.0 |
+| ロギング | Serilog | 3.1.1 |
+| DI | Microsoft.Extensions.DependencyInjection | 8.0.0 |
+| テスト | xUnit | 2.9.3 |
+| ビルド | MSBuild | .NET 10.0 SDK 付属 |
 
 ### 6.2 外部依存
 
 ```xml
-<!-- VolumeProfileManager.Core -->
-<PackageReference Include="Serilog" Version="4.0.*" />
-
 <!-- VolumeProfileManager.Infrastructure -->
-<PackageReference Include="NAudio" Version="2.2.*" />
-<PackageReference Include="System.Text.Json" Version="8.0.*" />
+<PackageReference Include="NAudio" Version="2.2.0" />
+<PackageReference Include="Serilog" Version="3.1.1" />
 
 <!-- VolumeProfileManager.TrayApp -->
-<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
-<PackageReference Include="Serilog.Sinks.File" Version="5.0.*" />
+<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+<PackageReference Include="Serilog" Version="3.1.1" />
+<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 ```
 
 ### 6.3 ログ設定
@@ -427,14 +378,13 @@ Windows トレイアイコンを主UIとして採用（Win32 API直接呼び出�
 ```
 [DEBUG]   - 関数呼び出し、パラメータ値
 [INFO]    - デバイス変更、音量調整
-[WARNING] - リトライ発生、非推奨 API 使用
+[WARNING] - 即時適用失敗、非推奨 API 使用
 [ERROR]   - 例外発生、失敗した操作
 ```
 
 ログ出力先：
 
-- **コンソール**：INFO レベル以上
-- **ファイル**：`%APPDATA%\VolumeProfileManager\logs\` （ローテーション：日次）
+- **ファイル**：`%LOCALAPPDATA%\VolumeProfileManager\logs\` （ローテーション：日次）
 
 ---
 
@@ -454,29 +404,34 @@ Windows トレイアイコンを主UIとして採用（Win32 API直接呼び出�
 | リスク | 対策 |
 |--------|------|
 | Core Audio API 仕様変更 | NAudio で抽象化、テストカバレッジ 80% 以上を維持 |
-| デバイス ID 変更 | ハードウェア ID + デバイス名での二重管理を検討 |
-| 音量調整の失敗 | リトライロジック実装、エラーハンドリング強化 |
+| デバイス ID 変更 | デバイス名を含む多段階マッチングを実装 |
+| 音量調整の失敗 | 例外をキャッチしログ出力、即時失敗は検証パスで救済 |
 | リソースリーク | using 宣言・Dispose パターンの徹底 |
+| 即時適用と検証パスの競合 | `SemaphoreSlim` による直列化、3 秒間の重複抑制 |
 
 ---
 
 ## 8. ロードマップ
 
-### v1.0 - MVP（リリース予定：2026年Q3）
+### v1.0（リリース済み）
 
 - [x] デバイス監視機能
 - [x] 音量プロファイル管理（CRUD）
 - [x] 自動音量調整
-- [x] コマンドラインインターフェース
 - [x] ユニット・統合テスト
+- [x] タスクトレイ常駐
+- [x] インストーラー対応
 
-### v1.1 - 安定性向上
+### v1.1.0-beta（リリース済み）
 
-- [x] トレイアイコン UI（Issue #5）
-- [x] Console版廃止・TrayApp一本化（Issue #1）
-- [ ] インストーラー（Inno Setup）（Issue #1、対応中）
-- [ ] 設定ウィザード
-- [ ] UX 改善（設定の簡潔化）
+- [x] プロファイル適用レスポンス向上（Issue #6）
+- [x] `OnDefaultDeviceChanged` 即時適用
+- [x] 通知種別（`DeviceChangeType`）の導入
+
+### v1.1.0（正式版予定）
+
+- [ ] `v1.1.0-beta` の動作確認とフィードバック反映
+- [ ] README ダウンロードリンク更新
 
 ### v2.0 - 拡張機能
 
@@ -496,7 +451,7 @@ IMMNotificationClient
   ├─ OnDeviceAdded(deviceId)
   ├─ OnDeviceRemoved(deviceId)
   ├─ OnDeviceStateChanged(deviceId, state)
-  ├─ OnDefaultDeviceChanged(flow, role, deviceId)  ← 監視対象
+  ├─ OnDefaultDeviceChanged(flow, role, deviceId)  ← 監視対象・即時適用対象
   └─ OnPropertyValueChanged(deviceId, key)
 ```
 
@@ -504,8 +459,7 @@ IMMNotificationClient
 
 | 項目 | AudioPilot | VolumeProfileManager |
 |-----|-----------|----------------------|
-| UI | WinUI 3 | コンソール |
+| UI | WinUI 3 | タスクトレイアイコン（Win32 API） |
 | 対象 | アプリケーション単位 | デバイス単位 |
 | スコープ | 統合制御 | シンプル・シングルタスク |
-| 配布 | 1つの実行ファイル | スタンドアロン実行ファイル |
-
+| 配布 | 1つの実行ファイル | Self-contained インストーラー |
