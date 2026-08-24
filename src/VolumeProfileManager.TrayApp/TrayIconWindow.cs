@@ -30,8 +30,46 @@ public sealed class TrayIconWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _hWnd = CreateNativeWindow();
-        _hIcon = LoadIcon(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
+        _hIcon = LoadAppIcon();
         AddTrayIcon();
+    }
+
+    private static IntPtr LoadAppIcon()
+    {
+        var cx = GetSystemMetrics(SM_CXSMICON);
+        var cy = GetSystemMetrics(SM_CYSMICON);
+        if (cx == 0) cx = 16;
+        if (cy == 0) cy = 16;
+
+        // 1. 同ディレクトリの app.ico を LoadImage でロード
+        var baseDir = AppContext.BaseDirectory;
+        var icoPath = Path.Combine(baseDir, "app.ico");
+        if (File.Exists(icoPath))
+        {
+            var hIco = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
+            if (hIco != IntPtr.Zero)
+            {
+                Logger.Debug("Loaded tray icon from app.ico file: {Path}", icoPath);
+                return hIco;
+            }
+        }
+
+        // 2. 実行ファイルのリソースから ExtractIconEx で小アイコンを取得
+        var exePath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
+        {
+            var smallIcons = new IntPtr[1];
+            var count = ExtractIconEx(exePath, 0, null, smallIcons, 1);
+            if (count > 0 && smallIcons[0] != IntPtr.Zero)
+            {
+                Logger.Debug("Loaded tray icon from executable resource: {ExePath}", exePath);
+                return smallIcons[0];
+            }
+        }
+
+        // 3. 標準アプリケーションアイコンにフォールバック
+        Logger.Information("Falling back to IDI_APPLICATION icon");
+        return LoadIcon(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
     }
 
     private IntPtr CreateNativeWindow()
