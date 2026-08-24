@@ -21,7 +21,7 @@ VolumeProfileManager は、クリーンアーキテクチャに基づいた 4 �
 - **VolumeProfileManager.Domain** - エンティティ・値オブジェクト
 - **VolumeProfileManager.Core** - ユースケース・サービスインターフェース
 - **VolumeProfileManager.Infrastructure** - 具体的実装（NAudio、JSON I/O）
-- **VolumeProfileManager.Console** - CLI・ホスト・DI コンテナ
+- **VolumeProfileManager.TrayApp** - タスクトレイ常駐ホスト・DI コンテナ・エントリーポイント
 
 ---
 
@@ -29,25 +29,30 @@ VolumeProfileManager は、クリーンアーキテクチャに基づいた 4 �
 
 ```
 ┌──────────────────────────────────────┐
-│   Console (CLI, ホスト)               │
+│   TrayApp (ホスト、Win32 トレイ UI)     │
 ├──────────────────────────────────────┤
-│   Core (インターフェース定義)          │
-│  - IDeviceMonitorService             │
-│  - IAudioDeviceService               │
-│  - IProfileService                   │
-│  - IAudioVolumeService               │
+│   Core (インターフェース定義)            │
+│  - IDeviceMonitorService              │
+│  - IDeviceMonitorOrchestrator         │
+│  - IAudioDeviceService                │
+│  - IProfileService                    │
+│  - IAudioVolumeService                │
+│  - IProfileCaptureService             │
 ├──────────────────────────────────────┤
-│   Infrastructure (実装)               │
-│  - DeviceMonitorService              │
-│  - AudioDeviceService                │
-│  - ProfileService                    │
-│  - AudioVolumeService                │
-│  - ProfileRepository                 │
+│   Infrastructure (実装)                │
+│  - DeviceMonitorService               │
+│  - DeviceMonitorOrchestrator          │
+│  - AudioDeviceService                 │
+│  - ProfileService                     │
+│  - AudioVolumeService                 │
+│  - ProfileCaptureService              │
+│  - ProfileRepository                  │
 ├──────────────────────────────────────┤
-│   Domain (エンティティ)                │
-│  - VolumeProfile                     │
-│  - AudioDeviceInfo                   │
-│  - DeviceChangedEventArgs            │
+│   Domain (エンティティ)                 │
+│  - VolumeProfile                      │
+│  - AudioDeviceInfo                    │
+│  - DeviceChangedEventArgs             │
+│  - ProfileAppliedEventArgs            │
 └──────────────────────────────────────┘
 ```
 
@@ -80,11 +85,20 @@ public class AudioDeviceInfo
 }
 
 // DeviceChangedEventArgs.cs
-public class DeviceChangedEventArgs : EventArgs
+public enum DeviceChangeType
+{
+    DefaultDeviceChanged,
+    DeviceStateChanged,
+    DeviceAdded,
+    DeviceRemoved
+}
+
+public sealed class DeviceChangedEventArgs : EventArgs
 {
     public string PreviousDeviceId { get; set; }
     public string NewDeviceId { get; set; }
     public DateTime Timestamp { get; set; }
+    public DeviceChangeType ChangeType { get; set; }
 }
 ```
 
@@ -101,6 +115,14 @@ public interface IDeviceMonitorService
     Task<AudioDeviceInfo?> GetCurrentDefaultDeviceAsync();
 }
 
+// IDeviceMonitorOrchestrator
+public interface IDeviceMonitorOrchestrator
+{
+    event EventHandler<ProfileAppliedEventArgs>? ProfileApplied;
+    void Start();
+    void Stop();
+}
+
 // IAudioDeviceService
 public interface IAudioDeviceService
 {
@@ -111,7 +133,7 @@ public interface IAudioDeviceService
 // IProfileService
 public interface IProfileService
 {
-    Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier);
+    Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier, string? deviceName = null);
     Task<IReadOnlyList<VolumeProfile>> GetAllProfilesAsync();
     Task SaveProfileAsync(VolumeProfile profile);
     Task DeleteProfileAsync(string deviceIdentifier);
@@ -125,6 +147,12 @@ public interface IAudioVolumeService
     Task<bool> GetMuteStateAsync();
     Task SetMuteStateAsync(bool isMuted);
 }
+
+// IProfileCaptureService
+public interface IProfileCaptureService
+{
+    Task<VolumeProfile?> CaptureCurrentProfileAsync();
+}
 ```
 
 ### 3.3 Infrastructure レイヤー
@@ -133,21 +161,52 @@ Core インターフェースの実装。NAudio、Serilog、JSON I/O に依存�
 
 ```csharp
 // DeviceMonitorService.cs
-public class DeviceMonitorService : IDeviceMonitorService
+public class DeviceMonitorService : IDeviceMonitorService, IMMNotificationClient, IDisposable
 {
-    private IMMNotificationClient _notificationClient;
-    private ILogger<DeviceMonitorService> _logger;
-    
     public event EventHandler<DeviceChangedEventArgs>? DeviceChanged;
-    
-    public async Task<IReadOnlyList<AudioDeviceInfo>> GetAvailableDevicesAsync()
+
+    public Task<IReadOnlyList<AudioDeviceInfo>> GetAvailableDevicesAsync()
     {
         // NAudio を使用してデバイス一覧を取得
     }
-    
-    public async Task<AudioDeviceInfo?> GetCurrentDefaultDeviceAsync()
+
+    public Task<AudioDeviceInfo?> GetCurrentDefaultDeviceAsync()
     {
         // 既定デバイスを取得
+    }
+
+    // IMMNotificationClient 実装
+    void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+    {
+        // DeviceChangeType.DefaultDeviceChanged を設定してイベント発火
+    }
+}
+
+// DeviceMonitorOrchestrator.cs
+public class DeviceMonitorOrchestrator : IDeviceMonitorOrchestrator
+{
+    public event EventHandler<ProfileAppliedEventArgs>? ProfileApplied;
+
+    public void Start()
+    {
+        // イベント購読
+    }
+
+    public void Stop()
+    {
+        // イベント購読解除
+    }
+
+    private void OnDeviceChanged(object? sender, DeviceChangedEventArgs e)
+    {
+        // 800ms 末尾デバウンスをスケジュール
+        // DefaultDeviceChanged の場合は即時適用も開始
+    }
+
+    private async Task ResolveAndApplyAsync()
+    {
+        // デフォルトデバイス取得 → プロファイル検索 → 音量・ミュート適用
+        // 同一デバイスの重複適用を 3 秒間抑制
     }
 }
 
@@ -155,128 +214,79 @@ public class DeviceMonitorService : IDeviceMonitorService
 public class ProfileService : IProfileService
 {
     private readonly IProfileRepository _repository;
-    private readonly ILogger<ProfileService> _logger;
-    
-    public async Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier)
+
+    public async Task<VolumeProfile?> GetProfileAsync(string deviceIdentifier, string? deviceName = null)
     {
-        return await _repository.GetByIdentifierAsync(deviceIdentifier);
+        var allProfiles = await _repository.GetAllAsync();
+        return DeviceProfileMatcher.Match(allProfiles, deviceIdentifier, deviceName);
     }
-    
-    public async Task SaveProfileAsync(VolumeProfile profile)
-    {
-        await _repository.SaveAsync(profile);
-    }
-    
-    // その他のメソッド...
 }
 
 // ProfileRepository.cs
 public class ProfileRepository : IProfileRepository
 {
     private readonly string _filePath;
-    private readonly ILogger<ProfileRepository> _logger;
-    
-    public async Task<VolumeProfile?> GetByIdentifierAsync(string deviceIdentifier)
-    {
-        // profiles.json から読み込み、デバイス識別子で検索
-    }
-    
+
     public async Task SaveAsync(VolumeProfile profile)
     {
-        // profiles.json に保存（再試行ロジック付き）
+        // profiles.json へ書き込み（.json.bak バックアップ付き）
     }
 }
 
 // AudioVolumeService.cs
-public class AudioVolumeService : IAudioVolumeService
+public class AudioVolumeService : IAudioVolumeService, IDisposable
 {
-    private ILogger<AudioVolumeService> _logger;
-    
     public async Task<float> GetMasterVolumeAsync()
     {
         // NAudio で現在のマスターボリュームを取得
     }
-    
+
     public async Task SetMasterVolumeAsync(float volume)
     {
-        // NAudio でマスターボリュームを設定（再試行ロジック付き）
+        // NAudio でマスターボリュームを設定（Math.Clamp）
     }
-    
-    // その他のメソッド...
+}
+
+// ProfileCaptureService.cs
+public class ProfileCaptureService : IProfileCaptureService
+{
+    public async Task<VolumeProfile?> CaptureCurrentProfileAsync()
+    {
+        // 既定デバイス・音量・ミュートを取得して保存
+    }
 }
 ```
 
-### 3.4 Console レイヤー
+### 3.4 TrayApp レイヤー
 
-CLI ホスト、DI コンテナ、エントリーポイント。
+タスクトレイ常駐ホスト、DI コンテナ、エントリーポイント。
 
 ```csharp
 // Program.cs
-public class Program
+public static class Program
 {
-    public static async Task Main(string[] args)
-    {
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        
-        var provider = services.BuildServiceProvider();
-        var cli = provider.GetRequiredService<ICli>();
-        
-        await cli.ExecuteAsync(args);
-    }
-    
-    private static void ConfigureServices(IServiceCollection services)
+    [STAThread]
+    public static int Main()
     {
         // Serilog 設定
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
-            .WriteTo.File("path/to/logs", rollingInterval: RollingInterval.Day)
-            .CreateLogger();
-        
-        services.AddSingleton(logger);
-        
-        // サービス登録
-        services.AddSingleton<IDeviceMonitorService, DeviceMonitorService>();
-        services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
-        services.AddSingleton<IProfileService, ProfileService>();
-        services.AddSingleton<IAudioVolumeService, AudioVolumeService>();
-        
-        services.AddSingleton<ICli, CliHost>();
+        // DI コンテナ構築
+        // トレイアイコン初期化
+        // Orchestrator 開始 → メッセージループ
     }
-}
 
-// CliHost.cs
-public class CliHost : ICli
-{
-    private readonly IDeviceMonitorService _monitorService;
-    private readonly IProfileService _profileService;
-    private readonly IAudioVolumeService _volumeService;
-    
-    public async Task ExecuteAsync(string[] args)
+    private static void ShowStatus(TrayIconWindow trayIcon, IServiceProvider provider)
     {
-        var command = ParseCommand(args);
-        await HandleCommand(command);
+        // 現在のデバイス・音量・ミュートをバルーン通知
     }
-    
-    private async Task HandleCommand(CliCommand command)
+
+    private static void UpdateProfile(TrayIconWindow trayIcon, IServiceProvider provider)
     {
-        switch(command.Name)
-        {
-            case "run":
-                await StartMonitoring();
-                break;
-            case "stop":
-                await StopMonitoring();
-                break;
-            case "list-devices":
-                await ListDevices();
-                break;
-            case "save-profile":
-                await SaveProfile(command.Args[0]);
-                break;
-            // その他のコマンド...
-        }
+        // IProfileCaptureService で現在のプロファイルを保存
+    }
+
+    private static void ToggleStartup(TrayIconWindow trayIcon)
+    {
+        // HKCU\...\Run へのスタートアップ登録をトグル
     }
 }
 ```
@@ -292,26 +302,39 @@ public class CliHost : ICli
 - **ライフタイム**: Singleton
 - **スレッドセーフ**: イベント発火時にロックなし（登録者の責任）
 
-### 4.2 IAudioDeviceService
+### 4.2 IDeviceMonitorOrchestrator
 
-- **責責務**: 利用可能なデバイス情報の取得
+- **責務**: デバイス変更通知に応じたプロファイル適用の調整
+- **依存**: `IDeviceMonitorService`, `IProfileService`, `IAudioVolumeService`, `IAudioDeviceService`
+- **ライフタイム**: Singleton
+- **スレッドセーフ**: 適用処理を `SemaphoreSlim` で直列化、重複抑制状態をロック保護
+
+### 4.3 IAudioDeviceService
+
+- **責務**: 利用可能なデバイス情報の取得
 - **依存**: NAudio の `MMDeviceEnumerator`
 - **ライフタイム**: Singleton
 - **スレッドセーフ**: 読み取り専用、スレッドセーフ
 
-### 4.3 IProfileService
+### 4.4 IProfileService
 
-- **責務**: プロファイルの CRUD 操作
+- **責務**: プロファイルの CRUD 操作と多段階照合
 - **依存**: `IProfileRepository`
 - **ライフタイム**: Singleton
 - **スレッドセーフ**: リポジトリがファイルロックで保証
 
-### 4.4 IAudioVolumeService
+### 4.5 IAudioVolumeService
 
 - **責務**: マスターボリューム・ミュート状態の取得・設定
 - **依存**: NAudio の `AudioEndpointVolume`
 - **ライフタイム**: Singleton
 - **スレッドセーフ**: NAudio 実装に準ずる
+
+### 4.6 IProfileCaptureService
+
+- **責務**: 現在のデフォルトデバイスの音量・ミュート状態をプロファイルとして保存
+- **依存**: `IAudioDeviceService`, `IAudioVolumeService`, `IProfileService`
+- **ライフタイム**: Singleton
 
 ---
 
@@ -321,20 +344,22 @@ public class CliHost : ICli
 
 ```
 [1] IMMNotificationClient
-    ↓ OnDefaultDeviceChanged イベント発火
+    ↓ OnDefaultDeviceChanged イベント発火（ChangeType = DefaultDeviceChanged）
 [2] IDeviceMonitorService
-    ↓ DeviceChanged イベント発火
-[3] CliHost (メインループ)
-    ↓ GetCurrentDefaultDeviceAsync() 呼び出し
+    ↓ DeviceChanged イベント発火（ChangeType 付き）
+[3] IDeviceMonitorOrchestrator
+    ├─ 即時パス: 待たずに ResolveAndApplyAsync()
+    └─ 検証パス: 800ms デバウンス後に ResolveAndApplyAsync()
 [4] IAudioDeviceService
-    ↓ 新デバイス情報を返す
+    ↓ GetDefaultPlaybackDeviceAsync() で確定デバイスを取得
 [5] IProfileService
-    ↓ GetProfileAsync(deviceIdentifier) で検索
+    ↓ GetProfileAsync(deviceId, deviceName) で検索
 [6] ProfileRepository
     ↓ profiles.json から読み込み
 [7] IProfileService (結果判定)
     ├─ プロファイル存在
     │   ↓ IAudioVolumeService.SetMasterVolumeAsync()
+    │   ↓ IAudioVolumeService.SetMuteStateAsync()
     └─ プロファイル未存在
         ↓ 新規作成、現在の音量を記録
 ```
@@ -342,75 +367,35 @@ public class CliHost : ICli
 ### 5.2 プロファイル保存時のフロー
 
 ```
-[1] CLI コマンド: save-profile {device-identifier}
+[1] トレイメニュー: プロファイルを更新
     ↓
-[2] CliHost
-    ↓ IAudioDeviceService.GetDefaultPlaybackDeviceAsync()
-    ↓ IAudioVolumeService.GetMasterVolumeAsync()
-    ↓ IAudioVolumeService.GetMuteStateAsync()
-[3] VolumeProfile オブジェクト生成
-    ↓
-[4] IProfileService.SaveProfileAsync()
-    ↓
-[5] ProfileRepository
-    ↓ profiles.json に追記/更新（再試行ロジック）
-    ↓ .json.bak にバックアップ作成
+[2] TrayApp.Program.UpdateProfile()
+    ↓ IProfileCaptureService.CaptureCurrentProfileAsync()
+       ├─ IAudioDeviceService.GetDefaultPlaybackDeviceAsync()
+       ├─ IAudioVolumeService.GetMasterVolumeAsync()
+       ├─ IAudioVolumeService.GetMuteStateAsync()
+       └─ VolumeProfile オブジェクト生成
+    ↓ IProfileService.SaveProfileAsync(profile)
+[3] ProfileRepository
+    ↓ profiles.json に追記/更新（.json.bak バックアップ）
 ```
 
 ---
 
 ## 6. エラーハンドリング
 
-### 6.1 再試行戦略
+### 6.1 即時適用失敗時の対応
 
-- **初期遅延**: 100ms
-- **乗数**: 1.5×
-- **最大遅延**: 5,000ms
-- **最大試行回数**: 5 回
-- **対象**: Core Audio API 呼び出し、ファイル I/O
-
-実装例:
-
-```csharp
-public class RetryPolicy
-{
-    public static async Task<T> ExecuteAsync<T>(
-        Func<Task<T>> operation, 
-        ILogger logger)
-    {
-        int attempt = 0;
-        int delayMs = 100;
-        
-        while(attempt < 5)
-        {
-            try
-            {
-                return await operation();
-            }
-            catch(Exception ex)
-            {
-                attempt++;
-                if(attempt >= 5)
-                {
-                    logger.LogError($"操作失敗（{attempt}回の再試行後）: {ex.Message}");
-                    throw;
-                }
-                
-                logger.LogWarning($"再試行 {attempt}/5 (遅延: {delayMs}ms)");
-                await Task.Delay(delayMs);
-                delayMs = Math.Min((int)(delayMs * 1.5), 5000);
-            }
-        }
-    }
-}
-```
+- 即時パスでデバイス解決やプロファイル適用に失敗した場合はログを記録し、処理を中断する
+- 直近適用済み状態は更新しない
+- 800ms 後の検証パスで同じ処理が再実行されるため、最終的な状態を救済する
 
 ### 6.2 例外分類
 
 | 例外タイプ | 対応 | ログレベル |
 |-----------|------|----------|
-| `COMException` (Core Audio API) | 再試行 | WARNING → ERROR |
-| `IOException` (profiles.json) | 再試行後、バックアップから復帰 | WARNING → ERROR |
+| `COMException` (Core Audio API) | ログ出力、検証パスに委ねる | WARNING → ERROR |
+| `IOException` (profiles.json) | バックアップから復帰 | ERROR |
 | `JsonException` (profiles.json 破損) | バックアップから復帰 | ERROR |
 | その他の予期しない例外 | ログ記録、継続実行 | ERROR |
 
@@ -419,39 +404,31 @@ public class RetryPolicy
 ## 7. DI コンテナ構成
 
 ```csharp
-public class ServiceConfiguration
+public static class Program
 {
-    public static void ConfigureServices(IServiceCollection services)
+    public static int Main()
     {
-        // Logging
-        var logger = CreateLogger();
-        services.AddSingleton(logger);
-        services.AddSingleton<ILogger>(logger);
-        
-        // Infrastructure
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.File(
+                "logs/vpm-tray-.log",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                restrictedToMinimumLevel: LogEventLevel.Information)
+            .CreateLogger();
+
+        var services = new ServiceCollection();
         services.AddSingleton<IDeviceMonitorService, DeviceMonitorService>();
+        services.AddSingleton<IAudioEnumeratorAdapter, AudioEnumeratorAdapter>();
         services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
         services.AddSingleton<IProfileRepository, ProfileRepository>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IAudioVolumeService, AudioVolumeService>();
-        
-        // Application
-        services.AddSingleton<IDeviceProfileManager, DeviceProfileManager>();
-        services.AddSingleton<ICli, CliHost>();
-    }
-    
-    private static ILogger CreateLogger()
-    {
-        return new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
-            .WriteTo.File(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "VolumeProfileManager", "logs", "app-.txt"),
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30)
-            .CreateLogger();
+        services.AddSingleton<IProfileCaptureService, ProfileCaptureService>();
+        services.AddSingleton<IDeviceMonitorOrchestrator, DeviceMonitorOrchestrator>();
+
+        var provider = services.BuildServiceProvider();
+        // トレイアイコンと Orchestrator の連携
     }
 }
 ```
@@ -463,7 +440,7 @@ public class ServiceConfiguration
 ### A. プロジェクト参照図
 
 ```
-Console → Core + Infrastructure
+TrayApp → Core + Infrastructure
 Infrastructure → Core + Domain
 Core → Domain
 Domain (外部依存なし)
