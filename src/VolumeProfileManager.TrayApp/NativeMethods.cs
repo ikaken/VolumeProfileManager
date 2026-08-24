@@ -13,6 +13,8 @@ internal static class NativeMethods
     public const uint NIM_ADD = 0x00000000;
     public const uint NIM_MODIFY = 0x00000001;
     public const uint NIM_DELETE = 0x00000002;
+    public const uint NIM_SETVERSION = 0x00000004;
+    public const uint NOTIFYICON_VERSION_4 = 4;
 
     public const uint NIF_MESSAGE = 0x00000001;
     public const uint NIF_ICON = 0x00000002;
@@ -137,6 +139,11 @@ internal static class NativeMethods
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern uint ExtractIconEx(string szFileName, int nIconIndex, IntPtr[]? phiconLarge, IntPtr[]? phiconSmall, uint nIcons);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint PrivateExtractIcons(
+        string szFileName, int nIconIndex, int cxIcon, int cyIcon,
+        IntPtr[] phicon, uint[]? piconid, uint nIcons, uint flags);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool DestroyIcon(IntPtr hIcon);
