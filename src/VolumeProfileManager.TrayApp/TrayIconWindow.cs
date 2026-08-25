@@ -30,8 +30,51 @@ public sealed class TrayIconWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _hWnd = CreateNativeWindow();
-        _hIcon = LoadIcon(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
+        _hIcon = LoadAppIcon();
         AddTrayIcon();
+    }
+
+    private static IntPtr LoadAppIcon()
+    {
+        var cx = GetSystemMetrics(SM_CXSMICON);
+        var cy = GetSystemMetrics(SM_CYSMICON);
+        if (cx <= 0) cx = 16;
+        if (cy <= 0) cy = 16;
+
+        var hModule = GetModuleHandle(null);
+
+        // 1. EXE自身のリソース (ID 1) から LoadImage でロード
+        var hResIcon = LoadImage(hModule, (IntPtr)1, IMAGE_ICON, cx, cy, 0);
+        if (hResIcon != IntPtr.Zero)
+        {
+            Logger.Information("Loaded tray icon from module resource ID 1: {HIcon}", hResIcon);
+            return hResIcon;
+        }
+
+        // 2. 同ディレクトリの app.ico を PrivateExtractIcons でロード
+        var baseDir = AppContext.BaseDirectory;
+        var icoPath = Path.Combine(baseDir, "app.ico");
+        if (File.Exists(icoPath))
+        {
+            var icons = new IntPtr[1];
+            var count = PrivateExtractIcons(icoPath, 0, cx, cy, icons, null, 1, 0);
+            if (count > 0 && icons[0] != IntPtr.Zero)
+            {
+                Logger.Information("Loaded tray icon from app.ico file via PrivateExtractIcons: {Path} ({CX}x{CY})", icoPath, cx, cy);
+                return icons[0];
+            }
+
+            var hIco = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
+            if (hIco != IntPtr.Zero)
+            {
+                Logger.Information("Loaded tray icon from app.ico file via LoadImage: {Path}", icoPath);
+                return hIco;
+            }
+        }
+
+        // 3. 標準アプリケーションアイコンにフォールバック
+        Logger.Warning("Falling back to IDI_APPLICATION icon");
+        return LoadIcon(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
     }
 
     private IntPtr CreateNativeWindow()
@@ -46,20 +89,26 @@ public sealed class TrayIconWindow : IDisposable
             cbClsExtra = 0,
             cbWndExtra = 0,
             hInstance = hInstance,
-            hIcon = IntPtr.Zero,
+            hIcon = _hIcon,
             hCursor = IntPtr.Zero,
             hbrBackground = IntPtr.Zero,
             lpszMenuName = null,
             lpszClassName = ClassName,
-            hIconSm = IntPtr.Zero,
+            hIconSm = _hIcon,
         };
 
-        RegisterClassEx(ref wcex);
+        var regResult = RegisterClassEx(ref wcex);
+        var regErr = Marshal.GetLastWin32Error();
 
-        return CreateWindowEx(
+        var hWnd = CreateWindowEx(
             0, ClassName, "VolumeProfileManager", 0,
             0, 0, 0, 0,
-            IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+            HWND_MESSAGE, IntPtr.Zero, hInstance, IntPtr.Zero);
+        var createErr = Marshal.GetLastWin32Error();
+
+        Logger.Information("CreateNativeWindow regResult={RegResult} (err={RegErr}), hWnd={HWnd} (err={CreateErr})", regResult, regErr, hWnd, createErr);
+
+        return hWnd;
     }
 
     private void AddTrayIcon()
@@ -79,7 +128,13 @@ public sealed class TrayIconWindow : IDisposable
 
         var added = Shell_NotifyIcon(NIM_ADD, ref data);
         Logger.Information("Shell_NotifyIcon(NIM_ADD) result={Result}, hWnd={HWnd}, hIcon={HIcon}", added, _hWnd, _hIcon);
-        if (!added)
+
+        if (added)
+        {
+            data.uTimeoutOrVersion = (int)NOTIFYICON_VERSION_4;
+            Shell_NotifyIcon(NIM_SETVERSION, ref data);
+        }
+        else
         {
             Logger.Warning("Shell_NotifyIcon(NIM_ADD) failed. Win32Error={Error}", Marshal.GetLastWin32Error());
         }
