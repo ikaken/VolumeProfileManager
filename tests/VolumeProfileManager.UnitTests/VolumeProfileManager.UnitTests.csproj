@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\VolumeProfileManager.Core\VolumeProfileManager.Core.csproj" />
     <ProjectReference Include="..\..\src\VolumeProfileManager.Infrastructure\VolumeProfileManager.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\VolumeProfileManager.Domain\VolumeProfileManager.Domain.csproj" />
+    <ProjectReference Include="..\..\src\VolumeProfileManager.TrayApp\VolumeProfileManager.TrayApp.csproj" />
   </ItemGroup>
 
 </Project>

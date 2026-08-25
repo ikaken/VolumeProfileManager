@@ -24,6 +24,9 @@ internal static class NativeMethods
     public const uint NIIF_INFO = 0x00000001;
 
     public const uint MF_STRING = 0x00000000;
+    public const uint MF_GRAYED = 0x00000001;
+    public const uint MF_DISABLED = 0x00000004;
+    public const uint MF_SEPARATOR = 0x00000800;
     public const uint TPM_RIGHTBUTTON = 0x0002;
     public const uint TPM_RETURNCMD = 0x0100;
 

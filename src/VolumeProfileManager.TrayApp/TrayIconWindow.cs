@@ -183,9 +183,20 @@ public sealed class TrayIconWindow : IDisposable
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
+    public static string AppVersionString
+    {
+        get
+        {
+            var version = typeof(TrayIconWindow).Assembly.GetName().Version;
+            return version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+        }
+    }
+
     private void ShowContextMenu()
     {
         var hMenu = CreatePopupMenu();
+        AppendMenu(hMenu, MF_STRING | MF_GRAYED | MF_DISABLED, IntPtr.Zero, $"VolumeProfileManager {AppVersionString}");
+        AppendMenu(hMenu, MF_SEPARATOR, IntPtr.Zero, string.Empty);
         AppendMenu(hMenu, MF_STRING, (IntPtr)CmdStatus, "ステータス表示");
         AppendMenu(hMenu, MF_STRING, (IntPtr)CmdUpdateProfile, "プロファイルを更新（現在の音量を保存）");
         AppendMenu(hMenu, MF_STRING, (IntPtr)CmdToggleStartup, "スタートアップ登録/解除");
