@@ -195,7 +195,7 @@ public sealed class TrayIconWindow : IDisposable
     private void ShowContextMenu()
     {
         var hMenu = CreatePopupMenu();
-        AppendMenu(hMenu, MF_STRING | MF_GRAYED | MF_DISABLED, IntPtr.Zero, $"VolumeProfileManager {AppVersionString}");
+        AppendMenu(hMenu, MF_STRING | MF_GRAYED | MF_DISABLED, (IntPtr)9999, $"VolumeProfileManager {AppVersionString}");
         AppendMenu(hMenu, MF_SEPARATOR, IntPtr.Zero, string.Empty);
         AppendMenu(hMenu, MF_STRING, (IntPtr)CmdStatus, "ステータス表示");
         AppendMenu(hMenu, MF_STRING, (IntPtr)CmdUpdateProfile, "プロファイルを更新（現在の音量を保存）");
