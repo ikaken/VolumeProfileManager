@@ -36,6 +36,8 @@ internal static class NativeMethods
     public const int SM_CXSMICON = 49;
     public const int SM_CYSMICON = 50;
 
+    public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
+
     public delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [StructLayout(LayoutKind.Sequential)]

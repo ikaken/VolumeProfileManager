@@ -103,7 +103,7 @@ public sealed class TrayIconWindow : IDisposable
         var hWnd = CreateWindowEx(
             0, ClassName, "VolumeProfileManager", 0,
             0, 0, 0, 0,
-            IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+            HWND_MESSAGE, IntPtr.Zero, hInstance, IntPtr.Zero);
         var createErr = Marshal.GetLastWin32Error();
 
         Logger.Information("CreateNativeWindow regResult={RegResult} (err={RegErr}), hWnd={HWnd} (err={CreateErr})", regResult, regErr, hWnd, createErr);
