@@ -24,16 +24,22 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          dotnet build --configuration Release --no-restore /p:Version=$version
 
       - name: Test
         run: dotnet test --configuration Release --no-build
 
       - name: Publish TrayApp (Self-contained, win-x64)
-        run: >
-          dotnet publish src/VolumeProfileManager.TrayApp
-          -c Release -r win-x64 --self-contained true
-          -o publish/TrayApp
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          dotnet publish src/VolumeProfileManager.TrayApp `
+            -c Release -r win-x64 --self-contained true `
+            -o publish/TrayApp `
+            /p:Version=$version
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress

@@ -188,8 +188,13 @@ public sealed class TrayIconWindow : IDisposable
         get
         {
             var version = typeof(TrayIconWindow).Assembly.GetName().Version;
-            return version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+            return FormatVersion(version);
         }
+    }
+
+    internal static string FormatVersion(Version? version)
+    {
+        return version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
     }
 
     private void ShowContextMenu()
