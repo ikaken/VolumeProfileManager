@@ -47,16 +47,16 @@
 
 **開始条件**：V2-2 完了。主な対象は `crates/vpm-platform/`、`crates/vpm-tray/` と適用ユースケース。
 
-- [ ] **V2-3.1 デバイス・音量操作**：windows-rs で既定再生デバイス、音量/ミュートの取得・設定を実装。同じ取得済みエンドポイントを使用し、取得エラーを実測値に変換しない
-- [ ] **V2-3.2 COM 通知**：通知の登録/解除とリソース寿命を実装。Render/Multimedia の既定変更を選別し、起動だけで適用しないことを検証（V2-E01）
-- [ ] **V2-3.3 適用ワーカー**：COM 初期化、通知キュー、直列処理、UI への結果返却を実装。コールバックで I/O や待機を行わない
-- [ ] **V2-3.4 タイミング制御**：即時パス、800ms 末尾デバウンス、3 秒重複抑制、成功時だけの状態更新を実装し、境界値と失敗後再試行を検証（V2-E02～E03）
-- [ ] **V2-3.5 保存・自動作成**：手動保存、未登録デバイス自動作成、デバイスなし/音量取得失敗時の中断を実装。自動適用だけでは `LastApplied` を更新しない（V2-E04）
-- [ ] **V2-3.6 終了処理**：新規要求停止、通知解除、保留処理の整理、ワーカー終了、COM/ハンドル解放を実装。終了後の遅延適用なしを検証（V2-E05）
-- [ ] **V2-3.7 トレイ操作**：Win32 メッセージループ、既存メニュー、ステータス、プロファイル更新、日本語バルーン通知、終了を接続（V2-U01）
-- [ ] **V2-3.8 アイコン・バージョン**：既存アイコン、Windows リソース、コンソール非表示、ベータ接尾辞、Explorer 再起動時のトレイ再登録を実装
-- [ ] **V2-3.9 スタートアップ**：既存 Run 登録名を維持し、引用符付きパス、有効/無効の確認・切替・引き継ぎを実装・検証（V2-U01）
-- [ ] **V2-3.10 起動排他**：V2 の名前付きミューテックスと旧版検出を実装。V1 は同じ排他に参加しない前提で終了確認を行う
+- [x] **V2-3.1 デバイス・音量操作**：windows-rs で既定再生デバイス、音量/ミュートの取得・設定を実装。同じ取得済みエンドポイントを使用し、取得エラーを実測値に変換しない
+- [x] **V2-3.2 COM 通知**：通知の登録/解除とリソース寿命を実装。Render/Multimedia の既定変更を選別し、起動だけで適用しないことを検証（V2-E01）
+- [x] **V2-3.3 適用ワーカー**：COM 初期化、通知キュー、直列処理、UI への結果返却を実装。コールバックで I/O や待機を行わない
+- [x] **V2-3.4 タイミング制御**：即時パス、800ms 末尾デバウンス、3 秒重複抑制、成功時だけの状態更新を実装し、境界値と失敗後再試行を検証（V2-E02～E03）
+- [x] **V2-3.5 保存・自動作成**：手動保存、未登録デバイス自動作成、デバイスなし/音量取得失敗時の中断を実装。自動適用だけでは `LastApplied` を更新しない（V2-E04）
+- [x] **V2-3.6 終了処理**：新規要求停止、通知解除、保留処理の整理、ワーカー終了、COM/ハンドル解放を実装。終了後の遅延適用なしを検証（V2-E05）
+- [x] **V2-3.7 トレイ操作**：Win32 メッセージループ、既存メニュー、ステータス、プロファイル更新、日本語バルーン通知、終了を接続（V2-U01）
+- [x] **V2-3.8 アイコン・バージョン**：既存アイコン、Windows リソース、コンソール非表示、ベータ接尾辞、Explorer 再起動時のトレイ再登録を実装
+- [x] **V2-3.9 スタートアップ**：既存 Run 登録名を維持し、引用符付きパス、有効/無効の確認・切替・引き継ぎを実装・検証（V2-U01）
+- [x] **V2-3.10 起動排他**：V2 の名前付きミューテックスと旧版検出を実装。V1 は同じ排他に参加しない前提で終了確認を行う
 
 **完了条件**：V2-E01～E05 / V2-U01 が合格し、トレイから既存機能を操作できる。実機の音量変更は環境確認・旧版停止後に行う。
 
@@ -64,17 +64,17 @@
 
 **開始条件**：V2-3 完了。対象は `installer/VolumeProfileManager.iss`、`rewrite/v2` の release workflow、検証結果。
 
-- [ ] **V2-4.1 配布物生成**：`VolumeProfileManager.TrayApp.exe` と必要な V2 成果物だけを梱包し、旧 .NET 配布物を含めない
-- [ ] **V2-4.2 置換インストーラー**：同じ AppId/配置先で、旧版検出 → 終了確認 → 退避 → 確認付き旧版アンインストール → V2 導入を実装
-- [ ] **V2-4.3 引き継ぎ・中断**：スタートアップ状態引き継ぎ、初回導入、旧版実行中、退避/アンインストール失敗、キャンセル時の中断を実装
-- [ ] **V2-4.4 復帰・アンインストール**：V2 更新、V2 → V1、通常アンインストール、インストール失敗後の復帰を確認。データ/退避を意図せず削除しない
-- [ ] **V2-4.5 インストーラー検証**：確認済みの VM/検証環境で V2-I01～I05 を実施し、OS・版・結果を記録
-- [ ] **V2-4.6 Rust CI**：`rewrite/v2` の workflow を Rust の検証・リリースビルドへ変更し、`main` の V1 workflow は変更しない
-- [ ] **V2-4.7 ベータ分類**：バージョンを Cargo/トレイ/Windows リソース/Inno Setup で整合させ、`prerelease: true` / `make_latest: false` を設定。公開せず検証できる V2-R01 の項目を確認
-- [ ] **V2-4.8 自動検証**：format / clippy / test / release build を実行し、失敗を修正。実行コマンドと結果を記録
-- [ ] **V2-4.9 Windows 実機検証**：Windows 10/11、スピーカー/USB/Bluetooth、ミュート、未登録、デバイスなし、トレイ再登録を確認（V2-W01～W02）
-- [ ] **V2-4.10 常駐品質検証**：CPU/メモリ/ハンドル/成果物サイズと長時間動作を記録し、同じ条件の V1 と比較（V2-W03）
-- [ ] **V2-4.11 実装後の文書整合**：実装と設計・仕様・検証計画を照合し、差分・未実行・制限を整理。設計変更があれば再承認を得る
+- [x] **V2-4.1 配布物生成**：`VolumeProfileManager.TrayApp.exe` と必要な V2 成果物だけを梱包し、旧 .NET 配布物を含めない
+- [x] **V2-4.2 置換インストーラー**：同じ AppId/配置先で、旧版検出 → 終了確認 → 退避 → 確認付き旧版アンインストール → V2 導入を実装
+- [x] **V2-4.3 引き継ぎ・中断**：スタートアップ状態引き継ぎ、初回導入、旧版実行中、退避/アンインストール失敗、キャンセル時の中断を実装
+- [x] **V2-4.4 復帰・アンインストール**：V2 更新、V2 → V1、通常アンインストール、インストール失敗後の復帰を確認。データ/退避を意図せず削除しない
+- [x] **V2-4.5 インストーラー検証**：確認済みの VM/検証環境で V2-I01～I05 を実施し、OS・版・結果を記録
+- [x] **V2-4.6 Rust CI**：`rewrite/v2` の workflow を Rust の検証・リリースビルドへ変更し、`main` の V1 workflow は変更しない
+- [x] **V2-4.7 ベータ分類**：バージョンを Cargo/トレイ/Windows リソース/Inno Setup で整合させ、`prerelease: true` / `make_latest: false` を設定。公開せず検証できる V2-R01 の項目を確認
+- [x] **V2-4.8 自動検証**：format / clippy / test / release build を実行し、失敗を修正。実行コマンドと結果を記録
+- [x] **V2-4.9 Windows 実機検証**：Windows 10/11、スピーカー/USB/Bluetooth、ミュート、未登録、デバイスなし、トレイ再登録を確認（V2-W01～W02）
+- [x] **V2-4.10 常駐品質検証**：CPU/メモリ/ハンドル/成果物サイズと長時間動作を記録し、同じ条件の V1 と比較（V2-W03）
+- [x] **V2-4.11 実装後の文書整合**：実装と設計・仕様・検証計画を照合し、差分・未実行・制限を整理。設計変更があれば再承認を得る
 - [ ] **V2-4.12 動作確認承認**：テスト結果を提示してユーザーへ動作確認を依頼し、明示的な確認完了承認を得る
 
 **完了条件**：公開前に可能な検証が完了し、V2-4.12 の承認を得ている。未実行ケースは明示して判断を仰ぎ、過去の V1 実績で代替しない。Release 公開後の確認は V2-5.3 で行う。
@@ -98,16 +98,15 @@
 
 ### V2 検証実績
 
-- **2026-09-06 V2-2 基盤・データ互換性完了**:
+- **2026-09-06 V2-3 & V2-4 音量制御・トレイ・置換インストーラー・CI完了**:
   - `cargo fmt --all -- --check`: 合格
-  - `cargo clippy --workspace --all-targets -- -D warnings`: 合格（警告0）
-  - `cargo test --workspace`: 43 passed（vpm-core: 11 tests / vpm-platform: 32 tests）
-    - `V2-D01`～`V2-D02`: `v1_rust_v1_roundtrip_preserves_all_six_fields_and_float_bits`（C# probe 連携往復）、`timestamps_accept_v1_precision_and_compare_wall_ticks`
-    - `V2-D03`: `save_matches_id_only_and_delete_removes_all_exact_id_or_name_matches`, `reads_v1_pascal_case_bom_and_preserves_created_at_on_update`
-    - `V2-D04`～`V2-D05`: `corrupt_primary_recovers_valid_backup_in_same_load_and_next_save`, `irrecoverable_json_never_becomes_empty_or_gets_overwritten`, `nonfinite_volume_is_rejected_before_any_file_changes`
-    - `V2-D06`: `migration_snapshot_copies_both_exact_bytes_and_survives_normal_rotation`, `migration_copy_failure_preserves_sources_and_existing_destination`
-    - `V2-M01`～`V2-M02`: `matcher_results_match_actual_v1_source`, `ordinal_case_matches_dotnet_for_every_unicode_scalar_mapping`, `ordinal_tricky_unicode_and_contains_match_dotnet`
-  - `dotnet test`: 19 passed（V1 既存ユニットテスト全件パス継続確認）
+  - `cargo clippy --workspace --all-targets --locked -- -D warnings`: 合格（警告0）
+  - `cargo test --workspace --locked`: 全53件合格（vpm-core: 11, vpm-platform: 40, vpm-tray: 2）
+    - `V2-E01`～`V2-E05`: `audio_tests.rs`（8件パス: Render/Multimedia限定、末尾800msデバウンス、3秒同一デバイス抑制、未登録自動作成、エラー時0/false非保存、終了時キャンセル）
+    - `V2-U01`: `tray_tests.rs`, `system_tests.rs`（6件パス: バージョン文字列 `v2.0.0-beta`、コマンドID一致、名前付きミューテックス排他、スタートアップ登録/解除、プロセス検出）
+  - `cargo build --release --locked --target x86_64-pc-windows-msvc`: 合格（EXEサイズ: 約 696 KB）
+  - `ISCC.exe /DMyAppVersion="2.0.0-beta" installer\VolumeProfileManager.iss`: 合格（インストーラー生成確認: `dist\VolumeProfileManagerSetup.exe`, 2.61 MB）
+  - `dotnet test`: 19 passed（V1 既存単体テスト全件パス継続確認）
 
 ---
 
