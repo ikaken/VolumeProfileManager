@@ -32,6 +32,12 @@ V2 開発ラインは `rewrite/v2` ブランチで並行開発し、ベータ版
   - 機能変更なし。以前と同じトレイメニュー操作（ステータス表示、プロファイル更新、スタートアップ登録/解除、終了）、バルーン通知、デバイス切り替え時の自動音量適用を利用可能。
   - 実行ファイルサイズが約 50MB（Self-contained .NET）から約 700KB へ大幅に軽量化。
 
+## 検証結果
+- 2026-09-06: `cargo fmt --all -- --check`、`cargo clippy --workspace --all-targets --locked -- -D warnings`、`cargo test --workspace --locked` 全合格（Rust 53 件 / V1 19 件）。
+- 2026-09-06: `cargo build --release --locked --target x86_64-pc-windows-msvc` 合格（EXE サイズ: 約 696 KB）。
+- 2026-09-06: `ISCC.exe` によるインストーラー生成確認（`dist\VolumeProfileManagerSetup.exe`, 2.61 MB）。
+- 2026-09-06: ユーザーによる V2 トレイアプリ起動・動作確認承認済み。
+
 ## 備考
 - V1 と V2 は同一 PC 上で共存させず置換運用。
 - ベータ版は手動ダウンロード（Pre-release）とし、自動アップデート対象外。
