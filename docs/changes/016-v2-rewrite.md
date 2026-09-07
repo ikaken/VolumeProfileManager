@@ -37,6 +37,8 @@ V2 開発ラインは `rewrite/v2` ブランチで並行開発し、ベータ版
 - 2026-09-06: `cargo build --release --locked --target x86_64-pc-windows-msvc` 合格（EXE サイズ: 約 696 KB）。
 - 2026-09-06: `ISCC.exe` によるインストーラー生成確認（`dist\VolumeProfileManagerSetup.exe`, 2.61 MB）。
 - 2026-09-06: ユーザーによる V2 トレイアプリ起動・動作確認承認済み。
+- 2026-09-07: VirusTotal 偽陽性対応。Inno Setup 6.0.3 固定・zip 圧縮・[Code]/[Registry]/[Run] セクションの削除により、インストーラーが 4/73（Microsoft クリア）まで低減。本体 EXE は 0/73。
+- 2026-09-07: `v2.0.1-beta` リリース（<https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.1-beta>）。
 
 ## 備考
 - V1 と V2 は同一 PC 上で共存させず置換運用。

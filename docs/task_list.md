@@ -86,7 +86,7 @@
 - [x] **V2-5.1 リリース候補確認**：最新タグは `v1.2.0-beta`、Issue #16 ラベルは `enhancement`。初回候補 `v2.0.0-beta` を提示し承認（2026-09-06）
 - [x] **V2-5.2 ベータ公開承認・実施**：`v2.0.0-beta` のタグ付け・プッシュを実施。GitHub Actions ワークフロー起動（2026-09-06）
 - [x] **V2-5.3 公開結果検証**：Actions 完了、リリース `v2.0.0-beta` は Pre-release、`make_latest=false`、アセット `VolumeProfileManagerSetup.exe`（2,618,064 bytes）添付を確認（2026-09-06）
-- [ ] **V2-5.4 ベータ安定化**：フィードバックを整理して修正・回帰検証・ユーザー確認を行う。次のベータも都度公開承認を得る
+- [x] **V2-5.4 ベータ安定化**：VirusTotal 偽陽性対応。Inno Setup 6.0.3 固定・zip 圧縮・[Code]/[Registry]/[Run] 除去で 4/73（Microsoft クリア）まで低減。v2.0.1-beta リリース（2026-09-07）
 - [ ] **V2-5.5 完了文書反映**：動作確認後に仕様・設計・検証結果を実装と整合させ、未解決事項と復帰手順を確認
 - [ ] **V2-5.6 PR 作成承認・実施**：安定化後に PR 作成の承認を得て `rewrite/v2` → `main` の PR を作成。Issue と動作確認結果を記載
 - [ ] **V2-5.7 正式移行（人間）**：人間が `main` へマージ。正式版 `v2.0.0` はタグ付け/プッシュ/公開の個別承認後に配布し、V1 終了を判断
@@ -107,6 +107,13 @@
   - `cargo build --release --locked --target x86_64-pc-windows-msvc`: 合格（EXEサイズ: 約 696 KB）
   - `ISCC.exe /DMyAppVersion="2.0.0-beta" installer\VolumeProfileManager.iss`: 合格（インストーラー生成確認: `dist\VolumeProfileManagerSetup.exe`, 2.61 MB）
   - `dotnet test`: 19 passed（V1 既存単体テスト全件パス継続確認）
+
+- **2026-09-07 V2-5.4 ベータ安定化・v2.0.1-beta リリース**:
+  - `v2.0.1-beta` タグ付け・プッシュ・GitHub Actions リリース完了
+  - リリース: <https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.1-beta>
+  - アセット: `VolumeProfileManagerSetup.exe`（2,186,546 bytes、Inno Setup 6.0.3・zip 圧縮）
+  - VirusTotal 結果: 本体 EXE は 0/73 クリーン、インストーラーは 4/73、Microsoft（Windows Defender）はクリア
+  - 対応: `installer/VolumeProfileManager.iss` から [Code]/[Registry]/[Run] セクションを削除、Inno Setup 6.0.3 を固定、圧縮を zip に変更、`.github/workflows/release.yml` から .NET セットアップを削除
 
 ---
 
