@@ -42,7 +42,7 @@ jobs:
           Copy-Item assets\app.ico publish\TrayApp\app.ico
 
       - name: Install Inno Setup
-        run: choco install innosetup --version=6.0.3 -y --no-progress
+        run: choco install innosetup --version=6.0.3 --allow-downgrade -y --no-progress
 
       - name: Build Installer
         shell: pwsh
