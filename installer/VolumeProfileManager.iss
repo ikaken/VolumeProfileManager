@@ -37,8 +37,9 @@ SetupIconFile=..\assets\app.ico
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 ; 置換インストール時に既存プロセスのファイルロックを回避するための標準機能
-CloseApplications=yes
+CloseApplications=force
 CloseApplicationsFilter=VolumeProfileManager.TrayApp.exe
+RestartApplications=no
 
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
@@ -50,3 +51,11 @@ Source: "{#PublishDir}\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{#MyAppName} をアンインストール"; Filename: "{uninstallexe}"
+
+[Registry]
+; スタートアップ（HKCU）登録。アンインストール時に自動削除。
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
+
+[Run]
+; インストール直後にアプリを起動（デフォルトでチェックされたまま実行）
+Filename: "{app}\{#MyAppExeName}"; Description: "VolumeProfileManager"; Flags: postinstall nowait
