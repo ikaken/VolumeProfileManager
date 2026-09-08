@@ -56,10 +56,23 @@ jobs:
           $isPrerelease = "${{ github.ref_name }}".Contains('-')
           echo "IS_PRERELEASE=$isPrerelease" >> $env:GITHUB_ENV
 
+      - name: Stage Portable Directory
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $portableDir = "dist\VolumeProfileManager-$version-portable"
+          New-Item -ItemType Directory -Force -Path "$portableDir\data"
+          Copy-Item publish\TrayApp\VolumeProfileManager.TrayApp.exe "$portableDir\VolumeProfileManager.TrayApp.exe"
+          Copy-Item publish\TrayApp\app.ico "$portableDir\app.ico"
+          New-Item -ItemType File -Path "$portableDir\portable.flag"
+          Compress-Archive -Path "$portableDir" -DestinationPath "dist\VolumeProfileManager-$version-portable.zip"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/VolumeProfileManagerSetup.exe
+          files: |
+            dist/VolumeProfileManagerSetup.exe
+            dist/VolumeProfileManager-*-portable.zip
           prerelease: ${{ env.IS_PRERELEASE == 'True' }}
           make_latest: ${{ env.IS_PRERELEASE != 'True' }}
           generate_release_notes: true

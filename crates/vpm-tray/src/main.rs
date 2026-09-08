@@ -1,6 +1,7 @@
 #![windows_subsystem = "windows"]
 
-use std::path::PathBuf;
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
 use std::sync::{Arc, Mutex};
 use vpm_core::SystemClock;
 use vpm_platform::audio::{
@@ -8,22 +9,51 @@ use vpm_platform::audio::{
 };
 use vpm_platform::logging::{DailyFileLogger, Level};
 use vpm_platform::persistence::JsonProfileStore;
+use vpm_platform::storage::StorageLayout;
 use vpm_platform::system::{SingleInstanceMutex, StartupRegistration};
 use vpm_tray::tray::{
     CMD_EXIT, CMD_STATUS, CMD_TOGGLE_STARTUP, CMD_UPDATE_PROFILE, TrayIconWindow,
 };
 
-fn get_app_data_dir() -> PathBuf {
-    if let Ok(local) = std::env::var("LOCALAPPDATA") {
-        PathBuf::from(local).join("VolumeProfileManager")
-    } else {
-        PathBuf::from(".").join("VolumeProfileManager")
+fn show_error_dialog(title: &str, message: &str) {
+    let wide_title: Vec<u16> = OsStr::new(title)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let wide_message: Vec<u16> = OsStr::new(message)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    unsafe {
+        windows::Win32::UI::WindowsAndMessaging::MessageBoxW(
+            None,
+            windows::core::PCWSTR(wide_message.as_ptr()),
+            windows::core::PCWSTR(wide_title.as_ptr()),
+            windows::Win32::UI::WindowsAndMessaging::MB_OK
+                | windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR,
+        );
     }
 }
 
 fn main() {
-    let app_dir = get_app_data_dir();
-    let log_dir = app_dir.join("logs");
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    let storage = StorageLayout::detect(&exe_dir);
+
+    if let Err(e) = storage.ensure_writable() {
+        let msg = format!(
+            "データ保存先ディレクトリへの書き込みに失敗しました。\n\n保存先: {}\nエラー: {}",
+            storage.base_dir().display(),
+            e
+        );
+        show_error_dialog("VolumeProfileManager - 起動エラー", &msg);
+        return;
+    }
+
+    let log_dir = storage.log_dir();
     let logger = Arc::new(DailyFileLogger::new(log_dir));
     logger
         .write(Level::Info, "VolumeProfileManager TrayApp starting...")
@@ -51,7 +81,7 @@ fn main() {
         }
     };
 
-    let profile_path = app_dir.join("profiles.json");
+    let profile_path = storage.profile_path();
     let store = Arc::new(JsonProfileStore::new(profile_path));
     let adapter = Arc::new(WindowsAudioDeviceAdapter::new());
     let clock = Arc::new(SystemClock::default());
