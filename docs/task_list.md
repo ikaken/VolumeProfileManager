@@ -122,6 +122,12 @@
   - 追加機能: インストール直後にアプリを起動（[Run]）、HKCU Run へのスタートアップ登録（[Registry]）、既存プロセスの強制終了（`CloseApplications=force`）
   - 注意: Windows Defender 等で `Trojan:Win32/Wacatac.C!ml` の偽陽性が出る可能性があります。未署名インストーラーのため、将来的には OV/EV コード署名が必要です。
 
+- **2026-09-09 Issue #17 ポータブル版対応・インストーラー版との同時リリース**:
+  - `portable.flag` によるポータブルモード判定と、`data\` 配下へのプロファイル・ログ保存分離（`crates/vpm-platform/src/storage.rs`）
+  - ポータブル保存先の書き込み権限エラー時の Win32 `MessageBoxW` エラー通知と安全終了
+  - GitHub Actions リリースワークフロー（`.github/workflows/release.yml`）でのポータブル ZIP 生成・リリースへの同時添付
+  - 単体・統合テスト 6 件追加（全 59 件合格）、リリースビルドおよびポータブルモード起動検証完了
+
 ---
 
 ## V1 開発履歴・旧計画の概要
