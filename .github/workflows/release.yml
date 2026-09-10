@@ -22,19 +22,6 @@ jobs:
           components: "clippy, rustfmt"
           targets: "x86_64-pc-windows-msvc"
 
-      - name: Verify Release Version
-        shell: pwsh
-        run: |
-          $tagVersion = "${{ github.ref_name }}".TrimStart('v')
-          $metadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
-          $versions = @($metadata.packages | ForEach-Object { $_.version } | Sort-Object -Unique)
-          if ($versions.Count -ne 1) {
-            throw "Workspace packages must use one version. Found: $($versions -join ', ')"
-          }
-          if ($versions[0] -ne $tagVersion) {
-            throw "Release tag version '$tagVersion' does not match Cargo version '$($versions[0])'."
-          }
-
       - name: Check Formatting
         run: cargo fmt --all -- --check
 

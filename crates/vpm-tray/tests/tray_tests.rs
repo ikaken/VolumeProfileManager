@@ -4,8 +4,8 @@ use vpm_tray::{APP_NAME, APP_VERSION, version_string};
 #[test]
 fn test_version_and_metadata() {
     assert_eq!(APP_NAME, "VolumeProfileManager");
-    assert!(!APP_VERSION.is_empty());
-    assert_eq!(version_string(), format!("v{APP_VERSION}"));
+    assert_eq!(APP_VERSION, "2.0.0-beta");
+    assert_eq!(version_string(), "v2.0.0-beta");
 }
 
 #[test]
