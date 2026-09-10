@@ -87,7 +87,7 @@
 - [x] **V2-5.2 ベータ公開承認・実施**：`v2.0.0-beta` のタグ付け・プッシュを実施。GitHub Actions ワークフロー起動（2026-09-06）
 - [x] **V2-5.3 公開結果検証**：Actions 完了、リリース `v2.0.0-beta` は Pre-release、`make_latest=false`、アセット `VolumeProfileManagerSetup.exe`（2,618,064 bytes）添付を確認（2026-09-06）
 - [x] **V2-5.4 ベータ安定化**：VirusTotal 偽陽性対応。Inno Setup 6.0.3 固定・zip 圧縮・[Code] 除去で 4/73（Microsoft クリア）まで低減。v2.0.1-beta リリース（2026-09-07）。その後、ユーザー要望で [Run]/[Registry]（インストール直後起動・スタートアップ登録）と CloseApplications=force を追加し v2.0.2-beta リリース（2026-09-07）
-- [ ] **V2-5.5 完了文書反映**：動作確認後に仕様・設計・検証結果を実装と整合させ、未解決事項と復帰手順を確認
+- [x] **V2-5.5 完了文書反映**：V2.1.1-betaのリリース結果、CI検証、アセット情報を変更履歴・タスクリストへ反映（2026-09-11）
 - [ ] **V2-5.6 PR 作成承認・実施**：安定化後に PR 作成の承認を得て `rewrite/v2` → `main` の PR を作成。Issue と動作確認結果を記載
 - [ ] **V2-5.7 正式移行（人間）**：人間が `main` へマージ。正式版 `v2.0.0` はタグ付け/プッシュ/公開の個別承認後に配布し、V1 終了を判断
 - [ ] **V2-5.8 完了確認**：マージ・正式配布・Issue の状態を確認。ブランチ削除などの後片付けは対象を提示し、個別確認後に実施
@@ -127,6 +127,14 @@
   - ポータブル保存先の書き込み権限エラー時の Win32 `MessageBoxW` エラー通知と安全終了
   - GitHub Actions リリースワークフロー（`.github/workflows/release.yml`）でのポータブル ZIP 生成・リリースへの同時添付
   - 単体・統合テスト 6 件追加（全 59 件合格）、リリースビルドおよびポータブルモード起動検証完了
+
+- **2026-09-11 V2.1.1-beta リリース（Issue #19対応）**:
+  - `v2.1.1-beta` タグ付け・プッシュ・GitHub Actions リリース完了
+  - リリース: <https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.1.1-beta>
+  - GitHub Actions: 成功（Verify Release Version、fmt、clippy、test、release build、Inno Setup、portable ZIP生成を含む）
+  - アセット: `VolumeProfileManagerSetup.exe`（2,189,041 bytes）および `VolumeProfileManager-2.1.1-beta-portable.zip`（531,436 bytes）
+  - SHA-256: インストーラー `16eed35da8254e234f71419775be2cce9a9aec2e359e4f6ef15bd27d40b2a68c`、ポータブル版 `01a205efae68b65001f65f3e152255596046324b20fc9a886278643b3aad964b`
+  - `Cargo.toml`のバージョンとタグの一致検証により、トレイメニュー表示は `VolumeProfileManager v2.1.1-beta` となる構成を確認
 
 ---
 

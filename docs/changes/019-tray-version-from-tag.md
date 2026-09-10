@@ -53,12 +53,12 @@ Cargo.toml: 2.1.1-beta
 
 ## 検証項目
 
-- [ ] `cargo test --workspace --locked` が全件通る
-- [ ] `APP_VERSION` が空でないことをテストできる
-- [ ] `version_string()` が `v{APP_VERSION}` を返す
-- [ ] タグとCargoバージョンが一致する場合、CI検証が成功する
-- [ ] タグとCargoバージョンが不一致の場合、CI検証が失敗する
-- [ ] リリース成果物のトレイメニューにCargoのバージョンが表示される
+- [x] `cargo test --workspace --locked` が全件通る
+- [x] `APP_VERSION` が空でないことをテストできる
+- [x] `version_string()` が `v{APP_VERSION}` を返す
+- [x] タグとCargoバージョンが一致する場合、CI検証が成功する
+- [x] タグとCargoバージョンが不一致の場合、CI検証が失敗する
+- [x] リリース成果物のトレイメニューにCargoのバージョンが表示される（`v2.1.1-beta`）
 
 ## 対象外
 

@@ -40,6 +40,7 @@ V2 開発ラインは `rewrite/v2` ブランチで並行開発し、ベータ版
 - 2026-09-07: VirusTotal 偽陽性対応。Inno Setup 6.0.3 固定・zip 圧縮・[Code]/[Registry]/[Run] セクションの削除により、インストーラーが 4/73（Microsoft クリア）まで低減。本体 EXE は 0/73。
 - 2026-09-07: `v2.0.1-beta` リリース（<https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.1-beta>）。
 - 2026-09-07: `v2.0.2-beta` リリース。インストーラーにインストール直後起動・HKCU スタートアップ登録・既存プロセス強制終了を追加。Windows Defender 偽陽性 (`Wacatac.C!ml`) の可能性があるため、将来的には OV/EV コード署名を推奨。
+- 2026-09-11: `v2.1.1-beta` リリース。Issue #19のバグ対応としてCargoバージョンを`2.1.1-beta`へ更新し、タグとの一致をCIで検証。インストーラーとポータブルZIPをPre-releaseへ添付。
 
 ## 備考
 - V1 と V2 は同一 PC 上で共存させず置換運用。
