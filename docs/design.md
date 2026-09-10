@@ -509,7 +509,7 @@ Cargo workspace を導入し、次の責務に分割する。以下のパスは�
 
 #### C.4 データ互換性と保護
 
-- 保存先は `%LOCALAPPDATA%\VolumeProfileManager\profiles.json`、ルートは JSON 配列を維持する。
+- 保存先は通常モード時 `%LOCALAPPDATA%\VolumeProfileManager\profiles.json`、ルートは JSON 配列を維持する。ポータブルモード（実行ファイル同一ディレクトリに `portable.flag` が存在する場合）は同一ディレクトリ配下の `data\profiles.json` を保存先とし、`%LOCALAPPDATA%` にはいかなる永続データも作成しない。書き込み権限がない場合は暗黙のフォールバックを行わず、明示的なエラー通知とともに安全に終了する。
 - 実装の `ProfileRepository` と `VolumeProfile` を基準に、キーは **`DeviceId`, `DeviceName`, `MasterVolume`, `IsMuted`, `CreatedAt`, `LastApplied`（PascalCase）** を維持する。仕様書の JSON サンプルも実装に合わせて PascalCase に統一する。
 - 日時は V1 が読み戻せる ISO 8601 形式とし、UTC、可変長の秒以下、V1 の未設定日時 `0001-01-01T00:00:00` を含む fixture で検証する。数値は V1 の float と互換な範囲・精度で扱う。
 - V1 が生成する正常な JSON について V1 → V2 → V1 の往復をテストする。新規のデータラッパーや必須キーを追加しない。既存項目更新時の `CreatedAt` 保持、ID/名前の照合と削除条件も維持する。
@@ -517,7 +517,7 @@ Cargo workspace を導入し、次の責務に分割する。以下のパスは�
 - 保存は一時ファイルへ書き込み・検証後、同一ディレクトリ内で置換する。直前の正常データを `profiles.json.bak` に保持し、保存失敗を成功通知しない。
 - **承認対象の安全性改善**：V1 は JSON 破損時にバックアップをコピーしても当該読み込みで空リストを返すため、その後の保存で復旧データを失う可能性がある。V2 はバックアップを検証・再読込してから復旧し、正常データが得られなければ自動作成/上書きを中断する。
 - **承認対象の安全性改善**：音量取得の失敗を `0` / `false` という実測値に置き換えて保存しない。エラーとして扱い、既存設定を保護する。通常の音量取得・保存機能は変えない。
-- ログは仕様書にある `%LOCALAPPDATA%\VolumeProfileManager\logs\` を候補とし、日次ローテーション・30 ファイル保持を維持する。V1 実装のカレントディレクトリ相対パスから変わる点は動作確認対象とする。
+- ログは通常モード時は `%LOCALAPPDATA%\VolumeProfileManager\logs\`、ポータブルモード時は `data\logs\` とし、日次ローテーション・30 ファイル保持を維持する。V1 実装のカレントディレクトリ相対パスから変わる点は動作確認対象とする。
 
 #### C.5 インストール置換・起動制御・V1 への復帰
 
