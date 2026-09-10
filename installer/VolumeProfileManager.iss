@@ -1,18 +1,14 @@
 ; VolumeProfileManager インストーラー定義 (Inno Setup)
 ;
-; ビルド前提:
-;   cargo build --release --locked --target x86_64-pc-windows-msvc
-;   上記で生成された target\x86_64-pc-windows-msvc\release\VolumeProfileManager_TrayApp.exe と
-;   assets\app.ico を publish\TrayApp へ配置しておくこと
+; ビルド前提: 事前に以下のコマンドで Self-contained 発行を行っておくこと
+;   dotnet publish ..\src\VolumeProfileManager.TrayApp\VolumeProfileManager.TrayApp.csproj ^
+;     -c Release -r win-x64 --self-contained true -o ..\publish\TrayApp
 ;
 ; ビルド方法（Inno Setup Compiler がインストールされていること）:
-;   ISCC.exe /DMyAppVersion=2.0.0-beta VolumeProfileManager.iss
-
-#ifndef MyAppVersion
-#define MyAppVersion "2.0.0-beta"
-#endif
+;   ISCC.exe VolumeProfileManager.iss
 
 #define MyAppName "VolumeProfileManager"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "VolumeProfileManager Project"
 #define MyAppExeName "VolumeProfileManager.TrayApp.exe"
 #define PublishDir "..\publish\TrayApp"
@@ -22,40 +18,36 @@ AppId={{8F2B6C6E-3D2E-4C7A-9A8B-1E5D6F7A9C10}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-; 管理者権限不要のユーザーローカルインストール（%LOCALAPPDATA%\Programs 配下）
+; 管理者権限不要のユーザーローカルインストール（%LOCALAPPDATA%\Programs配下）
 DefaultDirName={userpf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
 OutputDir=..\dist
 OutputBaseFilename=VolumeProfileManagerSetup
-Compression=zip
-SolidCompression=no
+Compression=lzma2
+SolidCompression=yes
 WizardStyle=modern
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 SetupIconFile=..\assets\app.ico
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
-; 置換インストール時に既存プロセスのファイルロックを回避するための標準機能
-CloseApplications=force
-CloseApplicationsFilter=VolumeProfileManager.TrayApp.exe
-RestartApplications=no
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
+[Tasks]
+Name: "startupicon"; Description: "Windowsログオン時に自動起動する"; GroupDescription: "追加のオプション:"; Flags: checkedonce
+
 [Files]
-Source: "{#PublishDir}\VolumeProfileManager.TrayApp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PublishDir}\app.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{#MyAppName} をアンインストール"; Filename: "{uninstallexe}"
 
 [Registry]
-; スタートアップ（HKCU）登録。アンインストール時に自動削除。
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: startupicon; Flags: uninsdeletevalue
 
 [Run]
-; インストール直後にアプリを起動（デフォルトでチェックされたまま実行）
-Filename: "{app}\{#MyAppExeName}"; Description: "VolumeProfileManager"; Flags: postinstall nowait
+Filename: "{app}\{#MyAppExeName}"; Description: "{#MyAppName} を起動する"; Flags: nowait postinstall skipifsilent

@@ -4,7 +4,6 @@ obj/
 **/bin/
 **/obj/
 artifacts/
-/target/
 
 ## VS Code
 .vscode/
