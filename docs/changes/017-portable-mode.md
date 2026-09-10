@@ -63,4 +63,3 @@ VolumeProfileManager V2 において、Inno Setup で作成した未署名イン
 ## 備考
 - `portable.flag` は空ファイルで問題ない。
 - コード署名証明書（OV/EV）導入や自動アップデートは対象外。
-
