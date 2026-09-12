@@ -9,17 +9,21 @@
 ## 主な機能
 - オーディオデバイスごとに音量・ミュート状態をプロファイルとして保存し、デバイス切替時に自動適用
 - 未登録デバイスへの切替時は現在の音量で自動的に新規プロファイルを作成
-- タスクトレイ常駐アプリ（`VolumeProfileManager.TrayApp`）: WinForms 不使用の軽量 Win32 API 実装
+- タスクトレイ常駐アプリ（`VolumeProfileManager.TrayApp`）: Rust + windows-rs による軽量 Win32 API 実装（約 700KB）
   - ステータス表示 / プロファイルを更新（現在の音量を保存） / スタートアップ登録・解除 / 終了
-- プロファイルの保存先: `%LOCALAPPDATA%\VolumeProfileManager\profiles.json`
+- プロファイルの保存先: `%LOCALAPPDATA%\VolumeProfileManager\profiles.json`（ポータブル版は `data\` 配下）
 
 ## ダウンロード
-最新版（v1.0.0）のインストーラーは [Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v1.0.0) からダウンロードできます。
+最新版（v2.0.0）は [Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.0) からダウンロードできます。
+
+- `VolumeProfileManagerSetup.exe` - インストーラー版（推奨）
+- `VolumeProfileManager-2.0.0-portable.zip` - ポータブル版
 
 ## 使い方
 
 1. **インストール**
-   [Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v1.0.0) から `VolumeProfileManagerSetup.exe` をダウンロードして実行し、ウィザードに従ってインストールします。
+   [Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.0) から `VolumeProfileManagerSetup.exe` をダウンロードして実行し、ウィザードに従ってインストールします。
+   ポータブル版を使う場合は ZIP を展開し、`VolumeProfileManager.TrayApp.exe` を実行します。
 
 2. **現在のデバイスの音量を設定**
    Windowsの音量ミキサーなどで、現在使用しているオーディオデバイスの音量・ミュート状態をお好みに調整します。
@@ -34,60 +38,69 @@
    一度プロファイルを保存すれば、以降はデバイスを切り替えるだけで、保存済みの音量・ミュート状態が自動的に適用されます（バルーン通知で結果が表示されます）。未登録のデバイスに切り替えた場合は、現在の音量で新規プロファイルが自動作成されます。
 
 ## 開発環境
-- .NET 10.0 SDK（`net10.0-windows` / Windows専用）
-- Visual Studio / VS Code
+- Rust 1.93.1（`rust-toolchain.toml` で固定 / `x86_64-pc-windows-msvc` / Windows専用）
+- Inno Setup 6（インストーラービルド時のみ）
 
 ## リポジトリ構成
-- `src/` - ソースコード（`Domain` / `Core` / `Infrastructure` / `TrayApp`）
-- `tests/` - 単体テスト
+- `crates/` - V2 ソースコード（Rust ワークスペース）
+  - `vpm-core` - ドメインモデル・プロファイル照合・永続化抽象
+  - `vpm-platform` - Core Audio API 連携・永続化・ログ・システム機能
+  - `vpm-tray` - Win32 タスクトレイアプリ
+- `src/`, `tests/` - V1（.NET 版）レガシーコード（参照用に残存）
 - `installer/` - Inno Setup インストーラースクリプト
+- `assets/` - アプリケーションアイコン
 - `docs/` - 仕様・設計・テスト計画・タスクリスト・変更履歴（`docs/changes/`）
 
 ## ビルド方法
 ```powershell
-cd c:\work\VolumeProfileManager
-dotnet restore
-dotnet build
+cargo build --release --locked --target x86_64-pc-windows-msvc
 ```
+実行ファイルは `target\x86_64-pc-windows-msvc\release\VolumeProfileManager_TrayApp.exe` に生成されます。
 
 ## テスト実行
 ```powershell
-dotnet test
+cargo test --workspace --locked
 ```
 
 ## タスクトレイ常駐アプリの実行（開発用）
 ```powershell
-dotnet run --project src\VolumeProfileManager.TrayApp
+cargo run -p vpm-tray
 ```
 タスクトレイアイコンを右クリックすると「ステータス表示」「プロファイルを更新」「スタートアップ登録/解除」「終了」のメニューが表示されます。デバイス切替を検知すると保存済みプロファイルを自動適用し、バルーン通知で結果を表示します。
 
 ## インストーラーのビルド（配布用）
 事前に [Inno Setup](https://jrsoftware.org/isinfo.php) をインストールしておく必要があります。
 
-1. Self-contained 発行
+1. リリースビルドと publish 配置
 ```powershell
-dotnet publish src\VolumeProfileManager.TrayApp -c Release -r win-x64 --self-contained true -o publish\TrayApp
+cargo build --release --locked --target x86_64-pc-windows-msvc
+New-Item -ItemType Directory -Force -Path publish\TrayApp
+Copy-Item target\x86_64-pc-windows-msvc\release\VolumeProfileManager_TrayApp.exe publish\TrayApp\VolumeProfileManager.TrayApp.exe
+Copy-Item assets\app.ico publish\TrayApp\app.ico
 ```
 
 2. インストーラービルド（ISCC.exe に PATH が通っていること）
 ```powershell
-ISCC.exe installer\VolumeProfileManager.iss
+ISCC.exe /DMyAppVersion=2.0.0 installer\VolumeProfileManager.iss
 ```
 
 3. `dist\VolumeProfileManagerSetup.exe` が生成されます。このインストーラーを実行すると、管理者権限不要でユーザーローカルにインストールされ、インストール時にスタートアップ登録の有無を選択できます。
+
+## ポータブル版
+`VolumeProfileManager-*-portable.zip` を展開したディレクトリには `portable.flag` が含まれており、実行するとプロファイル・ログを `<展開先>\data\` 配下に保存します（`%LOCALAPPDATA%` には書き込みません）。
 
 ## プロファイルの保存先
 ```
 %LOCALAPPDATA%\VolumeProfileManager\profiles.json
 ```
+ポータブル版: `<展開先>\data\profiles.json`
 
 ## ステータス
-- **v1.0.0**: ✅ リリース済み（[Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v1.0.0)）
-- **Phase 1～7**: ✅ 完了 - デバイス取得・音量操作・プロファイル自動照合/自動適用の実装完了
+- **v2.0.0**: ✅ リリース済み（[Releases](https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.0)）- Rust + windows-rs による全面再構築版（Issue #16）
+- **V1（.NET 版）**: ✅ 終了 - `src/` はレガシー参照用
 - **タスクトレイ常駐アプリ**: ✅ 実装済み・実機動作確認済み
-- **CLI版（Console）**: ✅ 廃止済み（Issue #1、TrayAppに一本化）
-- **インストーラー**: ✅ 実装済み・実機インストール/自動起動確認済み（Issue #1）
-- **テスト**: ✅ 複数デバイスタイプで検証済み
+- **インストーラー / ポータブル版**: ✅ GitHub Actions による自動ビルド・公開
+- **テスト**: ✅ 全63件合格（V1 とのデータ互換性検証を含む）
 
 ## 備考
 - 実機でのデバイス切り替えテストを推奨します。
