@@ -6,8 +6,8 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-vpm-core = { version = "2.1.1-beta", path = "../vpm-core" }
-vpm-platform = { version = "2.1.1-beta", path = "../vpm-platform" }
+vpm-core = { version = "2.0.0", path = "../vpm-core" }
+vpm-platform = { version = "2.0.0", path = "../vpm-platform" }
 windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_System_LibraryLoader", "Win32_System_Threading"] }
 
 [[bin]]
