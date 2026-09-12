@@ -41,6 +41,7 @@ V2 開発ラインは `rewrite/v2` ブランチで並行開発し、ベータ版
 - 2026-09-07: `v2.0.1-beta` リリース（<https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.1-beta>）。
 - 2026-09-07: `v2.0.2-beta` リリース。インストーラーにインストール直後起動・HKCU スタートアップ登録・既存プロセス強制終了を追加。Windows Defender 偽陽性 (`Wacatac.C!ml`) の可能性があるため、将来的には OV/EV コード署名を推奨。
 - 2026-09-11: `v2.1.1-beta` リリース。Issue #19のバグ対応としてCargoバージョンを`2.1.1-beta`へ更新し、タグとの一致をCIで検証。インストーラーとポータブルZIPをPre-releaseへ添付。
+- 2026-09-12: `v2.0.0` 正式リリース。最終確認（fmt/clippy/test全63件/release build 合格）後、PR #24 で `rewrite/v2` を `main` へマージ。`v2.0.0` タグ・プッシュにより Latest release を自動公開（インストーラー 2,188,995 bytes / ポータブルZIP 531,397 bytes）。Issue #16 クローズ、V1 終了。
 
 ## 備考
 - V1 と V2 は同一 PC 上で共存させず置換運用。

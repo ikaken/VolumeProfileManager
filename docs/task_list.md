@@ -88,9 +88,9 @@
 - [x] **V2-5.3 公開結果検証**：Actions 完了、リリース `v2.0.0-beta` は Pre-release、`make_latest=false`、アセット `VolumeProfileManagerSetup.exe`（2,618,064 bytes）添付を確認（2026-09-06）
 - [x] **V2-5.4 ベータ安定化**：VirusTotal 偽陽性対応。Inno Setup 6.0.3 固定・zip 圧縮・[Code] 除去で 4/73（Microsoft クリア）まで低減。v2.0.1-beta リリース（2026-09-07）。その後、ユーザー要望で [Run]/[Registry]（インストール直後起動・スタートアップ登録）と CloseApplications=force を追加し v2.0.2-beta リリース（2026-09-07）
 - [x] **V2-5.5 完了文書反映**：V2.1.1-betaのリリース結果、CI検証、アセット情報を変更履歴・タスクリストへ反映（2026-09-11）
-- [ ] **V2-5.6 PR 作成承認・実施**：安定化後に PR 作成の承認を得て `rewrite/v2` → `main` の PR を作成。Issue と動作確認結果を記載
-- [ ] **V2-5.7 正式移行（人間）**：人間が `main` へマージ。正式版 `v2.0.0` はタグ付け/プッシュ/公開の個別承認後に配布し、V1 終了を判断
-- [ ] **V2-5.8 完了確認**：マージ・正式配布・Issue の状態を確認。ブランチ削除などの後片付けは対象を提示し、個別確認後に実施
+- [x] **V2-5.6 PR 作成承認・実施**：PR #24（`rewrite/v2` → `main`）を作成。Issue #16 へのリンクと動作確認エビデンスを記載（2026-09-12）
+- [x] **V2-5.7 正式移行（人間）**：ユーザーが PR #24 を `main` へマージ。正式版 `v2.0.0` をタグ付け・プッシュし、GitHub Actions により Latest release として公開。V1 終了（2026-09-12）
+- [ ] **V2-5.8 完了確認**：マージ・正式配布・Issue #16 クローズ・README V2 化を確認済み。ブランチ削除などの後片付けは対象を提示し、個別確認後に実施
 
 **完了条件**：人間による正式移行判断とマージ、承認済みの正式配布を確認し、未解決事項と Issue の状態を整理している。
 
@@ -135,6 +135,15 @@
   - アセット: `VolumeProfileManagerSetup.exe`（2,189,041 bytes）および `VolumeProfileManager-2.1.1-beta-portable.zip`（531,436 bytes）
   - SHA-256: インストーラー `16eed35da8254e234f71419775be2cce9a9aec2e359e4f6ef15bd27d40b2a68c`、ポータブル版 `01a205efae68b65001f65f3e152255596046324b20fc9a886278643b3aad964b`
   - `Cargo.toml`のバージョンとタグの一致検証により、トレイメニュー表示は `VolumeProfileManager v2.1.1-beta` となる構成を確認
+
+- **2026-09-12 V2.0.0 正式リリース（Issue #16 完了）**:
+  - 最終確認: fmt / clippy / test（全63件）/ release build すべて合格
+  - `origin/main` を `rewrite/v2` へ `-s ours` マージし PR コンフリクトを事前解消、Cargo バージョンを `2.0.0` に設定
+  - PR #24（`rewrite/v2` → `main`）をユーザーがマージ → `v2.0.0` タグ付け・プッシュ → GitHub Actions 成功
+  - リリース: <https://github.com/ikaken/VolumeProfileManager/releases/tag/v2.0.0>（Latest release、自動アップデート対象）
+  - アセット: `VolumeProfileManagerSetup.exe`（2,188,995 bytes）および `VolumeProfileManager-2.0.0-portable.zip`（531,397 bytes）
+  - Issue #16 は PR マージにより自動クローズ。README を V2 向けに全面更新
+  - 以降 `main` を V2 の開発ラインとして使用
 
 ---
 
