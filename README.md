@@ -19,6 +19,8 @@
 - `VolumeProfileManagerSetup.exe` - インストーラー版（推奨）
 - `VolumeProfileManager-2.0.0-portable.zip` - ポータブル版
 
+> **注意**: 現在の配布物はコード署名されていないため、Windows 11 の Smart App Control が有効な環境では実行がブロックされます。コード署名対応は [Issue #30](https://github.com/ikaken/VolumeProfileManager/issues/30) で進行中です。
+
 ## 使い方
 
 1. **インストール**
@@ -105,3 +107,6 @@ ISCC.exe /DMyAppVersion=2.0.0 installer\VolumeProfileManager.iss
 ## 備考
 - 実機でのデバイス切り替えテストを推奨します。
 - 詳細な実装内容については [docs/task_list.md](docs/task_list.md)、変更履歴は [docs/changes/](docs/changes/) を参照してください。
+
+## ライセンス
+[MIT License](LICENSE)
