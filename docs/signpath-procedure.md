@@ -43,6 +43,7 @@ GitHub Releases で配布するインストーラー版・ポータブル版に 
   | Category | `Utilities` / `System tools` / `Audio` など選択肢の中で最も近いもの |
   | Description | `Lightweight Windows tray application that saves volume and mute state per audio output device and automatically restores the saved profile when the default device changes (e.g. switching between headphones and speakers). Built with Rust and windows-rs using the Win32 Core Audio API. Distributed as an Inno Setup installer and a portable ZIP via GitHub Releases, built entirely by GitHub Actions.` |
   | Expectations（署名が必要な理由を問う項目がある場合） | `Our unsigned installer and executable are blocked by Windows 11 Smart App Control and flagged by SmartScreen. We want to sign the main executable, the Inno Setup installer and its uninstaller so users can install and run the app on protected devices.` |
+  | Reputation（必須） | 下記「Reputation 項目について」参照。**事実のみを記載する** |
   | Maintainer Type | `Individual` |
   | Build System | `GitHub Actions` |
   | First Name / Last Name | 本人の氏名 |
@@ -53,9 +54,51 @@ GitHub Releases で配布するインストーラー版・ポータブル版に 
   | チェックボックス | SignPath 側プライバシーポリシーへの同意は必須。ニュースレター等は任意 |
 
   **プライバシーポリシーについて**: 本アプリは外部通信・テレメトリ・個人情報収集を一切行わないため、現状ポリシーページがない。Privacy Policy URL が必須項目の場合は、エージェントに依頼して `PRIVACY.md`（データ収集なし・ネットワーク通信なし・プロファイルはローカル保存のみ）を `main` に追加してから URL を指定する。
+
+  **Reputation 項目について**: 「広く使われている / 信頼されている」ことを示す情報（メディア掲載・ブログ・ダウンロード統計・GitHub Insights・コミュニティ議論）を求められる。2026-10-14 時点の実績は以下のとおりで、審査基準に対して弱い。**虚偽・誇張は規約違反**のため事実のみ記載し、却下された場合は実績を積んで再申請する（方針 C）。
+
+  | 指標 | 値（2026-10-14） |
+  |---|---|
+  | リポジトリ作成 | 2026-08-06 |
+  | Star / Fork / Watcher | 1 / 0 / 0 |
+  | リリース数 | 10（正式 2・ベータ 8） |
+  | 累計ダウンロード | 約 23 件 |
+  | メディア掲載・ブログ・コミュニティ議論 | なし |
+
+  記入例（英語・申請時点の数値に更新すること）:
+  ```
+  This is a young project (repository created August 2026) with a small user base so far:
+  - 10 releases on GitHub (2 stable, 8 beta), ~20 cumulative downloads
+  - https://github.com/ikaken/VolumeProfileManager/releases
+  - Fully automated, reproducible builds via GitHub Actions (.github/workflows/release.yml)
+  - 63 automated tests, documented specs and change history in docs/
+  We are applying early because the unsigned installer is blocked by Windows 11 Smart App Control,
+  which prevents new users from trying the app at all. We understand reputation is limited and are
+  happy to re-apply later if the project does not yet meet the Foundation's criteria.
+  ```
+  最新の数値は次のコマンドで取得できる: `gh api repos/ikaken/VolumeProfileManager --jq '{stars:.stargazers_count,forks:.forks_count}'` / `gh api repos/ikaken/VolumeProfileManager/releases --jq '[.[].assets[].download_count] | add'`
 - [ ] SignPath からの返信メールを待つ（数日〜数週間）。追加質問があれば回答する
+- [ ] **却下された場合**: 却下理由を記録し、下記「フェーズ A-3: 実績づくり」を進めたうえで再申請する
 - [ ] 承認されたら、案内に従って SignPath.io（https://app.signpath.io）のアカウントを作成し、MFA を有効にする
 - [ ] 承認結果（Organization 名・Organization ID・証明書の種類）をエージェントに共有する
+
+---
+
+## フェーズ A-3: 実績づくり（申請と並行して進める・方針 C）
+
+SignPath の審査結果に関わらず、プロジェクトの露出と利用実績を増やす。SAC ブロックの根本解決としては実績に依存しない Microsoft Store 配布（#29）の優先度も高い。
+
+### 【エージェント】
+- [ ] README の英語版（`README.en.md`）を作成し、英語圏からの到達性を上げる
+- [ ] Microsoft Store 配布（#29）の設計に着手する（Store 署名により SAC 問題を実績に依存せず解決できる）
+- [ ] winget（`microsoft/winget-pkgs`）へのマニフェスト登録手順を調査する（署名済み成果物が前提になる可能性があるため、SignPath または Store 対応後）
+- [ ] 技術記事の下書き支援（Rust + windows-rs でのトレイアプリ実装、Core Audio API 連携など）
+
+### 【あなた】
+- [ ] GitHub リポジトリの About に Description / Topics（`windows`, `rust`, `audio`, `volume`, `tray`, `win32` など）を設定する
+- [ ] 技術記事（Zenn / Qiita / dev.to 等）を公開し、リポジトリへリンクする
+- [ ] Microsoft Store 配布（#29）の設計レビュー・開発者アカウント登録（無料）
+- [ ] 一定期間後（目安: 1〜3 か月）に Star / ダウンロード数を再確認し、再申請の判断をする
 
 ---
 
