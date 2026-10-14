@@ -3,11 +3,12 @@
 GitHub Releases で配布するインストーラー版・ポータブル版に SignPath Foundation の無料コード署名を付与し、Smart App Control (SAC) 有効環境で実行できるようにするための手順書。
 
 - 凡例: **【あなた】** = リポジトリオーナーの手動作業（アカウント・申請・リポジトリ設定など、エージェントが代行できないもの） / **【エージェント】** = コード・ワークフロー・ドキュメントの変更作業
-- 進行は 2 フェーズ。フェーズ A はこの PR で完了。フェーズ B は SignPath の審査承認後に別 PR で実施する。
+- 進行は 2 フェーズ。フェーズ A は PR #31 で完了。フェーズ B は SignPath の審査承認後に別 PR で実施する。
+- 本手順書は進捗に応じて随時更新する（チェック済み項目は `[x]`）。
 
 ---
 
-## フェーズ A: 申請の前提条件を整える（本 PR）
+## フェーズ A: 申請の前提条件を整える（PR #31・完了）
 
 ### 【エージェント】
 - [x] `LICENSE`（MIT）を追加
@@ -15,26 +16,43 @@ GitHub Releases で配布するインストーラー版・ポータブル版に 
 - [x] README に SAC 有効環境での制限事項の暫定注記と「ライセンス」節を追加
 - [x] `docs/changes/030-signpath-code-signing.md`（設計書）を作成
 - [x] 本手順書を作成
-- [ ] PR を作成する（ユーザーの指示後）
+- [x] PR #31 を作成する
 
 ### 【あなた】
-- [ ] PR の内容を確認し、`main` へマージする
-- [ ] GitHub アカウントで 2 要素認証（MFA）を有効にする（SignPath Foundation の必須条件）
+- [x] PR #31 の内容を確認し、`main` へマージする
+- [x] GitHub アカウントで 2 要素認証（MFA）を有効にする（SignPath Foundation の必須条件）
   - GitHub → Settings → Password and authentication → Two-factor authentication
+  - 確認済み: Enabled（認証アプリ + GitHub Mobile 構成済み）
 
 ---
 
 ## フェーズ A-2: SignPath Foundation への申請
 
 ### 【あなた】
-- [ ] https://signpath.org/apply を開き、申請フォームを送信する。入力内容の目安:
-  - プロジェクト名: `VolumeProfileManager`
-  - リポジトリ URL: `https://github.com/ikaken/VolumeProfileManager`
-  - ダウンロードページ URL: `https://github.com/ikaken/VolumeProfileManager/releases`
-  - ライセンス: MIT
-  - 説明（英語）: 例 `Lightweight Windows tray app that saves per-audio-device volume/mute profiles and applies them automatically when the default device changes. Built with Rust + windows-rs, distributed as Inno Setup installer and portable ZIP via GitHub Releases.`
-  - ビルドシステム: GitHub Actions（`.github/workflows/release.yml`）
-  - 署名したい成果物: `VolumeProfileManager.TrayApp.exe`、`VolumeProfileManagerSetup.exe`（Inno Setup）、アンインストーラー `unins000.exe`
+- [ ] https://signpath.org/apply を開き、申請フォームを送信する。各項目の入力例は以下のとおり（フォームの項目名・構成はサイト側で変わることがあるため、画面に合わせて読み替える）
+
+  | フォーム項目 | 入力例 |
+  |---|---|
+  | Project Name | `VolumeProfileManager` |
+  | Repository URL | `https://github.com/ikaken/VolumeProfileManager` |
+  | Homepage URL | `https://github.com/ikaken/VolumeProfileManager`（専用サイトがないため README を指す） |
+  | Download URL | `https://github.com/ikaken/VolumeProfileManager/releases` |
+  | Privacy Policy URL | 必須なら `https://github.com/ikaken/VolumeProfileManager/blob/main/PRIVACY.md`（下記「プライバシーポリシーについて」参照）。任意なら空欄 |
+  | Wikipedia URL（任意） | 空欄 |
+  | Tagline | `Per-device volume profiles for Windows, applied automatically on audio device switch` |
+  | Category | `Utilities` / `System tools` / `Audio` など選択肢の中で最も近いもの |
+  | Description | `Lightweight Windows tray application that saves volume and mute state per audio output device and automatically restores the saved profile when the default device changes (e.g. switching between headphones and speakers). Built with Rust and windows-rs using the Win32 Core Audio API. Distributed as an Inno Setup installer and a portable ZIP via GitHub Releases, built entirely by GitHub Actions.` |
+  | Expectations（署名が必要な理由を問う項目がある場合） | `Our unsigned installer and executable are blocked by Windows 11 Smart App Control and flagged by SmartScreen. We want to sign the main executable, the Inno Setup installer and its uninstaller so users can install and run the app on protected devices.` |
+  | Maintainer Type | `Individual` |
+  | Build System | `GitHub Actions` |
+  | First Name / Last Name | 本人の氏名 |
+  | Email | 連絡用メールアドレス（承認通知が届く） |
+  | Company Name | 空欄（個人のため） |
+  | Primary Discovery Channel | SignPath を知った経路（`Search engine` / `Microsoft documentation` など） |
+  | Please specify the exact source（任意） | 空欄可 |
+  | チェックボックス | SignPath 側プライバシーポリシーへの同意は必須。ニュースレター等は任意 |
+
+  **プライバシーポリシーについて**: 本アプリは外部通信・テレメトリ・個人情報収集を一切行わないため、現状ポリシーページがない。Privacy Policy URL が必須項目の場合は、エージェントに依頼して `PRIVACY.md`（データ収集なし・ネットワーク通信なし・プロファイルはローカル保存のみ）を `main` に追加してから URL を指定する。
 - [ ] SignPath からの返信メールを待つ（数日〜数週間）。追加質問があれば回答する
 - [ ] 承認されたら、案内に従って SignPath.io（https://app.signpath.io）のアカウントを作成し、MFA を有効にする
 - [ ] 承認結果（Organization 名・Organization ID・証明書の種類）をエージェントに共有する
