@@ -1,3 +1,4 @@
+pub mod notification;
 pub mod tray;
 
 pub const APP_NAME: &str = "VolumeProfileManager";

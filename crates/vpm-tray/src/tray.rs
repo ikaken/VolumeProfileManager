@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Shell::{
-    NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_TIP, NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY,
-    NIM_SETVERSION, NOTIFYICON_VERSION_4, NOTIFYICONDATAW, Shell_NotifyIconW,
+    NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_SETVERSION, NOTIFYICON_VERSION_4,
+    NOTIFYICONDATAW, Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
@@ -16,6 +16,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_NULL, WM_RBUTTONUP, WM_USER, WNDCLASSEXW,
 };
 use windows::core::{PCWSTR, w};
+
+use crate::notification::NotificationWindow;
 
 pub const CMD_STATUS: u32 = 1001;
 pub const CMD_TOGGLE_STARTUP: u32 = 1002;
@@ -34,6 +36,7 @@ type HandlerFn = Box<dyn Fn(u32) + Send + Sync>;
 pub struct TrayIconWindow {
     hwnd: HWND,
     hicon: HICON,
+    notification: Option<NotificationWindow>,
     _handler: Box<HandlerFn>,
 }
 
@@ -89,6 +92,7 @@ impl TrayIconWindow {
             let window = Self {
                 hwnd,
                 hicon,
+                notification: NotificationWindow::new().ok(),
                 _handler: handler_box,
             };
 
@@ -97,16 +101,9 @@ impl TrayIconWindow {
         }
     }
 
-    pub fn show_balloon(&self, title: &str, message: &str) {
-        unsafe {
-            let mut data = self.create_notify_icon_data();
-            data.uFlags = NIF_INFO;
-            data.dwInfoFlags = NIIF_INFO;
-
-            copy_str_to_u16_buf(&mut data.szInfoTitle, title);
-            copy_str_to_u16_buf(&mut data.szInfo, message);
-
-            let _ = Shell_NotifyIconW(NIM_MODIFY, &data);
+    pub fn show_notification(&self, title: &str, message: &str) {
+        if let Some(notification) = &self.notification {
+            notification.show(title, message);
         }
     }
 
@@ -293,6 +290,7 @@ impl TrayIconWindow {
                     let window = TrayIconWindow {
                         hwnd,
                         hicon: HICON::default(),
+                        notification: None,
                         _handler: Box::new(Box::new(|_| {})),
                     };
                     window.show_context_menu();
@@ -321,6 +319,7 @@ impl TrayIconWindow {
                 let window = TrayIconWindow {
                     hwnd,
                     hicon: Self::load_app_icon(),
+                    notification: None,
                     _handler: Box::new(Box::new(|_| {})),
                 };
                 window.add_tray_icon();

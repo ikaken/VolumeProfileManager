@@ -131,7 +131,7 @@ fn main() {
         if let Ok(guard) = tray_cell_for_events.lock()
             && let Some(tray) = guard.as_ref()
         {
-            tray.show_balloon(&event.device_name, &message);
+            tray.show_notification(&event.device_name, &message);
         }
     });
 
@@ -165,7 +165,7 @@ fn main() {
             if let Ok(guard) = tray_cell_for_cmd.lock()
                 && let Some(tray) = guard.as_ref()
             {
-                tray.show_balloon(&device_name, &msg);
+                tray.show_notification(&device_name, &msg);
             }
         }
         CMD_UPDATE_PROFILE => {
@@ -185,14 +185,14 @@ fn main() {
                     if let Ok(guard) = tray_cell_for_cmd.lock()
                         && let Some(tray) = guard.as_ref()
                     {
-                        tray.show_balloon(&profile.device_name, &msg);
+                        tray.show_notification(&profile.device_name, &msg);
                     }
                 }
                 _ => {
                     if let Ok(guard) = tray_cell_for_cmd.lock()
                         && let Some(tray) = guard.as_ref()
                     {
-                        tray.show_balloon(
+                        tray.show_notification(
                                 "VolumeProfileManager",
                                 "現在の再生デバイスを特定できなかったため、プロファイルを更新できませんでした",
                             );
@@ -218,7 +218,7 @@ fn main() {
                         if let Ok(guard) = tray_cell_for_cmd.lock()
                             && let Some(tray) = guard.as_ref()
                         {
-                            tray.show_balloon("VolumeProfileManager", msg);
+                            tray.show_notification("VolumeProfileManager", msg);
                         }
                     }
                     Err(e) => {
