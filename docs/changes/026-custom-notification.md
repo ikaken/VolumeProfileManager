@@ -37,7 +37,7 @@
 - 2026-10-17: `cargo clippy --workspace --all-targets --locked -- -D warnings` パス（警告ゼロ）。
 - 2026-10-17: `cargo test --workspace --locked` で vpm-platform 44 件・vpm-tray 5 件（新規 `compute_popup_rect` テスト 3 件を含む）・vpm-core 7 件合格。vpm-core `compatibility` テスト 4 件は検証環境に .NET SDK がないため未実行（本変更とは無関係）。
 - 2026-10-17: `cargo build --release --locked` 成功（`VolumeProfileManager_TrayApp.exe` 約 708KB）。
-- 実機確認: （ユーザー確認後に追記）
+- 2026-10-22: 実機確認（Windows 11、DPI 125%）。ステータス表示で右下にポップアップが即時表示、連打時は待たされず最新内容で上書き、約 4 秒で自動消去、クリックで即消去されることをユーザーが確認。
 
 ## 備考
 - **採用理由**: 遅延の原因は OS 側の通知キューであるため、アプリ側からの設定変更では解消できず、自前描画以外に手段がない。WinRT トースト通知は AppUserModelID の登録が必要で、通知センターのキューと集中モードの影響を同様に受けるため不採用。外部クレートによる実装も依存追加に加え内部経路は同じため不採用。
